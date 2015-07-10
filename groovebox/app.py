@@ -16,8 +16,7 @@ from views import apis
 import views
 from configs import options
 
-urls = ('/partials/<path:partial>', views.Partial,
-        #'/api', apis,
+urls = ('/api', apis,
         '/<path:uri>', views.Base,
         '/', views.Base
         )

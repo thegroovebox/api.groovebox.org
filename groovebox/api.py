@@ -5,6 +5,9 @@ BASE_URL = "https://archive.org"
 API_URL = "%s/advancedsearch.php" % BASE_URL
 METADATA = "%s/metadata" % BASE_URL
 
+def artists():
+    return json.load(open('static/data/artists.json', 'r'))
+
 def concerts(band, limit=20000):
     """Retrieves all the concerts (items) of a band.
 
@@ -18,6 +21,12 @@ def concerts(band, limit=20000):
         "output": "json"
         }
     return requests.get(API_URL, params=params).json()
+
+def tracks(concert):
+    """Returns a unique, ordered list of tracks from a concert"""
+    tracks = set()
+    
+
 
 def tracks(concert, ts=None):
     """Constructs a dictionary of track names within this concert mapped to metadata

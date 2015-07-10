@@ -163,10 +163,10 @@ a:hover {
 }
 
 #resultsbox {
-    display: none; 
+    display: none;
     position: fixed;
     right: 250px;
-    left: 325px;
+    left: 300px;
     top: 0px;
     bottom: 0px;
     padding: 20px;
@@ -181,13 +181,23 @@ a:hover {
     height: 20px; background-color: rgb(74, 75, 97); border-radius: 5px;
 }
 
+#resultsbox header span {
+    display: block;
+    font-size: .8em;
+    text-transform: uppercase;
+    margin-left: 4px;
+}
+
 #resultsbox header h1 {
+    width: 515px;
     font-family: 'Muli';
     float: left;
+    margin: 0px;
 }
 
 #resultsbox .coverart {
     float: left;
+    margin-left: 20px;
     margin-right: 10px;
 }
 
@@ -196,7 +206,34 @@ a:hover {
 }
 
 #resultsbox table {
+    margin-top: 20px;
     width: 100%;
+    border-spacing: 0px;
+}
+
+#resultsbox table tr {
+    font-size: .9em;
+}
+
+#resultsbox table th {
+    text-align: left;
+    text-transform: uppercase;
+    font-weight: normal;
+}
+
+#resultsbox table td {
+    border-bottom: 1px solid #1E1F37;
+    text-align: left;
+}
+
+#resultsbox table td {
+    padding: 10px;
+    border-bottom: 1px solid #1E1F37;
+}
+
+#resultsbox table th {
+    padding: 10px;
+    border-bottom: 1px solid #1E1F37;
 }
 
 #resultsbox table tr td:first-child {
@@ -205,6 +242,10 @@ a:hover {
 
 #resultsbox table tr td:last-child {
     width: 100px;
+}
+
+#resultsbox table tbody tr:hover {
+    background-color: #1E1F37;
 }
 
 .coverart {
@@ -264,7 +305,7 @@ a:hover {
 .section {
     min-width: 969px;
     font-size: .9em;
-    margin-bottom: 25px;
+    margin-bottom: 30px;
 }
 
 .section hr {
@@ -276,7 +317,7 @@ a:hover {
 .section h2 {
     word-spacing: 5px;
     margin: 15px 0px 0px 0px;
-    font-size: 1.1em;
+    font-size: .9em;
     font-weight: normal;
     text-transform: uppercase;
 }
@@ -290,18 +331,18 @@ a:hover {
 .section ul.albums li {
     box-sizing: border-box;
     display: inline-block;
-    width: 222px;
-    height: 300px;
+    width: 182px;
+    height: 275px;
     background-color: #1E1F37;
-    margin-right: 23px;
+    margin-right: 15px;
 }
 
 .section ul.moods {
-    margin-bottom: -10px;
+    margin-bottom: -25px;
 }
 
 .section ul.moods li {
-    height: 225px;
+    height: 182px;
 }
 
 ul.albums li:last-child {
@@ -310,6 +351,7 @@ ul.albums li:last-child {
 
 .section ul.albums li a img {
     width: 100%;
+    height: 182px;
 }
 
 .section .albums li.album .album-details {
@@ -321,7 +363,7 @@ ul.albums li:last-child {
     text-transform: capitalize;
     white-space: nowrap;
     overflow: hidden;
-    width: 200px;
+    width: 170px;
     font-size: .9em;
     font-weight: normal;    
     text-overflow: ellipsis;
@@ -330,6 +372,8 @@ ul.albums li:last-child {
 .section .albums li.album .album-details h3 {
     font-size: .8em;
     font-weight: normal;
+    text-overflow: ellipsis;
+    width: 170px;
 }
 
 textarea:focus, input:focus {
@@ -364,7 +408,7 @@ textarea:focus, input:focus {
 
 .genre {    
     position: relative;
-    top: -145px;
+    top: -130px;
     color: #fff;
     text-align: center;
     font-size: 1.3em;

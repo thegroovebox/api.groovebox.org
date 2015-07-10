@@ -27,18 +27,14 @@ def rest_api(f):
     """Decorator to allow routes to return json"""
     def inner(*args, **kwargs):
         try:
-            try:
-                res = f(*args, **kwargs)
-                if isinstance(res, wrappers.Response):
-                    return res
-                response = Response(json.dumps(res))
-            except Exception as e:
-                response = Response(json.dumps(e.__dict__))
+            res = f(*args, **kwargs)
+            if isinstance(res, wrappers.Response):
+                return res
+            response = Response(json.dumps(res))
+        except Exception as e:
+            response = Response(json.dumps(e.__dict__))
 
-            response.headers.add('Content-Type', 'application/json')
-            response.headers['Access-Control-Allow-Credentials'] = 'true'
-            return response
-        finally:
-            #DB Rollbacks to protect against inconsistent states
-            pass
+        response.headers.add('Content-Type', 'application/json')
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        return response
     return inner

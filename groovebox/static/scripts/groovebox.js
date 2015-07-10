@@ -1,192 +1,96 @@
 var playSong;
-var tracks = [{
-  "item": "gd79-09-04.sbd.clugston.9452.sbeok.shnf",
-  "id": "gd79-09-04Sbdd1t11.shn",
-  "track": "11",
-  "creator": "Grateful Dead",
-  "album": "1979-09-04 - Madison Square Garden",
-  "title": "Deal",
-  "length": 211.2,
-},
-{
-  "item": "gd79-09-04.sbd.clugston.9452.sbeok.shnf",
-  "id": "gd79-09-04Sbdd1t04.shn",
-  "track": "4",
-  "creator": "Grateful Dead",
-  "album": "1979-09-04 - Madison Square Garden",
-  "title": "Me & My Uncle",
-  "length": 109.57,
-},
-{
-  "item": "gd79-09-04.sbd.clugston.9452.sbeok.shnf",
-  "id": "gd79-09-04Sbdd3t07.shn",
-  "track": "21",
-  "creator": "Grateful Dead",
-  "album": "1979-09-04 - Madison Square Garden",
-  "title": "Shakedown Street",
-  "length": 414.72,
-},
-{
-  "item": "gd79-09-04.sbd.clugston.9452.sbeok.shnf",
-  "id": "gd79-09-04Sbdd2t03.shn",
-  "track": "14",
-  "creator": "Grateful Dead",
-  "album": "1979-09-04 - Madison Square Garden",
-  "title": "Looks Like Rain",
-  "length": 293.11,
-},
-{
-  "item": "gd79-09-04.sbd.clugston.9452.sbeok.shnf",
-  "id": "gd79-09-04Sbdd3t04.shn",
-  "track": "18",
-  "creator": "Grateful Dead",
-  "album": "1979-09-04 - Madison Square Garden",
-  "title": "Space",
-  "length": 258.93,
-},
-{
-  "item": "gd79-09-04.sbd.clugston.9452.sbeok.shnf",
-  "id": "gd79-09-04Sbdd2t02.shn",
-  "track": "13",
-  "creator": "Grateful Dead",
-  "album": "1979-09-04 - Madison Square Garden",
-  "title": "I Know You Rider",
-  "length": 247.46,
-},
-{
-  "item": "gd79-09-04.sbd.clugston.9452.sbeok.shnf",
-  "id": "gd79-09-04Sbdd3t06.shn",
-  "track": "20",
-  "creator": "Grateful Dead",
-  "album": "1979-09-04 - Madison Square Garden",
-  "title": "Around & Around",
-  "length": 315.54,
-},
-{
-  "item": "gd79-09-04.sbd.clugston.9452.sbeok.shnf",
-  "id": "gd79-09-04Sbdd1t06.shn",
-  "track": "6",
-  "creator": "Grateful Dead",
-  "album": "1979-09-04 - Madison Square Garden",
-  "title": "Candyman",
-  "length": 234.24,
-},
-{
-  "item": "gd79-09-04.sbd.clugston.9452.sbeok.shnf",
-  "id": "gd79-09-04Sbdd1t03.shn",
-  "track": "3",
-  "creator": "Grateful Dead",
-  "album": "1979-09-04 - Madison Square Garden",
-  "title": "Banter",
-  "length": 25.77,
-},
-{
-  "item": "gd79-09-04.sbd.clugston.9452.sbeok.shnf",
-  "id": "gd79-09-04Sbdd1t01.shn",
-  "track": "1",
-  "creator": "Grateful Dead",
-  "album": "1979-09-04 - Madison Square Garden",
-  "title": "Jack Straw",
-  "length": 229.82,
-},
-{
-  "item": "gd79-09-04.sbd.clugston.9452.sbeok.shnf",
-  "id": "gd79-09-04Sbdd1t10.shn",
-  "track": "10",
-  "creator": "Grateful Dead",
-  "album": "1979-09-04 - Madison Square Garden",
-  "title": "Saint of Circumstance",
-  "length": 230.29,
-},
-{
-  "item": "gd79-09-04.sbd.clugston.9452.sbeok.shnf",
-  "id": "gd79-09-04Sbdd3t03.shn",
-  "track": "17",
-  "creator": "Grateful Dead",
-  "album": "1979-09-04 - Madison Square Garden",
-  "title": "Drums",
-  "length": 456.18,
-},
-{
-  "item": "gd79-09-04.sbd.clugston.9452.sbeok.shnf",
-  "id": "gd79-09-04Sbdd2t01.shn",
-  "track": "12",
-  "creator": "Grateful Dead",
-  "album": "1979-09-04 - Madison Square Garden",
-  "title": "China Cat Sunflower",
-  "length": 329.15,
-},
-{
-  "item": "gd79-09-04.sbd.clugston.9452.sbeok.shnf",
-  "id": "gd79-09-04Sbdd1t09.shn",
-  "track": "9",
-  "creator": "Grateful Dead",
-  "album": "1979-09-04 - Madison Square Garden",
-  "title": "Lost Sailor",
-  "length": 262.36,
-},
-{
-  "item": "gd79-09-04.sbd.clugston.9452.sbeok.shnf",
-  "id": "gd79-09-04Sbdd3t01.shn",
-  "track": "15",
-  "creator": "Grateful Dead",
-  "album": "1979-09-04 - Madison Square Garden",
-  "title": "He's Gone",
-  "length": 405.57
-},
-{
-  "item": "gd79-09-04.sbd.clugston.9452.sbeok.shnf",
-  "id": "gd79-09-04Sbdd1t07.shn",
-  "track": "7",
-  "creator": "Grateful Dead",
-  "album": "1979-09-04 - Madison Square Garden",
-  "title": "Minglewood Blues",
-  "length": 274.1,},
-{
-  "item": "gd79-09-04.sbd.clugston.9452.sbeok.shnf",
-  "id": "gd79-09-04Sbdd1t02.shn",
-  "track": "2",
-  "creator": "Grateful Dead",
-  "album": "1979-09-04 - Madison Square Garden",
-  "title": "Sugaree",
-  "length": 479.72,
-},
-{
-  "item": "gd79-09-04.sbd.clugston.9452.sbeok.shnf",
-  "id": "gd79-09-04Sbdd3t05.shn",
-  "track": "19",
-  "creator": "Grateful Dead",
-  "album": "1979-09-04 - Madison Square Garden",
-  "title": "Wharf Rat",
-  "length": 419.89,
-},
-{
-  "item": "gd79-09-04.sbd.clugston.9452.sbeok.shnf",
-  "id": "gd79-09-04Sbdd3t02.shn",
-  "track": "16",
-  "creator": "Grateful Dead",
-  "album": "1979-09-04 - Madison Square Garden",
-  "title": "Jam",
-  "length": 312.6,
-},
-{
-  "item": "gd79-09-04.sbd.clugston.9452.sbeok.shnf",
-  "id": "gd79-09-04Sbdd1t08.shn",
-  "track": "8",
-  "creator": "Grateful Dead",
-  "album": "1979-09-04 - Madison Square Garden",
-  "title": "Tennessee Jed",
-  "length": 329.6,
-},
-{
-  "item": "gd79-09-04.sbd.clugston.9452.sbeok.shnf",
-  "id": "gd79-09-04Sbdd1t05.shn",
-  "track": "5",
-  "creator": "Grateful Dead",
-  "album": "1979-09-04 - Madison Square Garden",
-  "title": "Big River",
-  "length": 22.84,
-}];
+var tracks = [
+  {
+    "id": "eits2008-03-21d1t01.mp3",
+    "concert": "eits2008-03-21.m300.flac16",
+    "title": "intro",
+    "creator": "Explosions in the Sky",
+    "album": "2008-03-21 - Great American Music Hall",
+    "number": "01",
+    "length": 36.38
+  },
+  {
+    "id": "eits2008-03-21d1t02.mp3",
+    "concert": "eits2008-03-21.m300.flac16",
+    "title": "First Breath After Coma",
+    "creator": "Explosions in the Sky",
+    "album": "2008-03-21 - Great American Music Hall",
+    "number": "02",
+    "length": 657.53
+  },
+  {
+    "id": "eits2008-03-21d1t03.mp3",
+    "concert": "eits2008-03-21.m300.flac16",
+    "title": "Catastrophe And The Cure",
+    "creator": "Explosions in the Sky",
+    "album": "2008-03-21 - Great American Music Hall",
+    "number": "03",
+    "length": 489.88,
+  },
+  {
+    "id": "eits2008-03-21d1t04.mp3",
+    "concert": "eits2008-03-21.m300.flac16",
+    "title": "The Birth And Death Of The Day",
+    "creator": "Explosions in the Sky",
+    "album": "2008-03-21 - Great American Music Hall",
+    "number": "04",
+    "length": 473.44,
+  },
+  {
+    "id": "eits2008-03-21d1t05.mp3",
+    "concert": "eits2008-03-21.m300.flac16",
+    "title": "Six Days At The Bottom Of The Ocean",
+    "creator": "Explosions in the Sky",
+    "album": "2008-03-21 - Great American Music Hall",
+    "number": "05",
+    "length": 597.36,
+  },
+  {
+    "id": "eits2008-03-21d1t06.mp3",
+    "concert": "eits2008-03-21.m300.flac16",
+    "title": "Greet Death",
+    "creator": "Explosions in the Sky",
+    "album": "2008-03-21 - Great American Music Hall",
+    "number": "06",
+    "length": 588.04
+  },
+  {
+    "id": "eits2008-03-21d1t07.mp3",
+    "concert": "eits2008-03-21.m300.flac16",
+    "title": "It's Natural To Be Afraid",
+    "creator": "Explosions in the Sky",
+    "album": "2008-03-21 - Great American Music Hall",
+    "number": "07",
+    "length": 788.9
+  },
+  {
+    "id": "eits2008-03-21d2t01.mp3",
+    "concert": "eits2008-03-21.m300.flac16",
+    "title": "Your Hand In Mine",
+    "creator": "Explosions in the Sky",
+    "album": "2008-03-21 - Great American Music Hall",
+    "number": "08",
+    "length": 525.48
+  },
+  {
+    "id": "eits2008-03-21d2t02.mp3",
+    "concert": "eits2008-03-21.m300.flac16",
+    "title": "The Only Moment We Were Alone",
+    "creator": "Explosions in the Sky",
+    "album": "2008-03-21 - Great American Music Hall",
+    "number": "09",
+    "length": 669.17
+  },
+  {
+    "id": "eits2008-03-21d2t03.mp3",
+    "concert": "eits2008-03-21.m300.flac16",
+    "title": "outro",
+    "creator": "Explosions in the Sky",
+    "album": "2008-03-21 - Great American Music Hall",
+    "number": "10",
+    "length": 150.84
+  }
+];
 
 (function () {
   'use strict';
@@ -197,8 +101,14 @@ var tracks = [{
   if (document.documentElement.clientWidth < 900) {}
   */
 
-  playSong = function(concertId, fileId) {
-    $('#audio-player source').attr("src", baseurl + concertId + "/" + fileId);
+  playSong = function(concertId, fileId, uuid) {
+    var url = baseurl + concertId + "/" + fileId;
+    var src = $('#resultsbox .coverart img').attr('src');
+    var track = tracks[uuid];
+    $('#nowplaying .album-cover img').attr("src", src);
+    $('#nowplaying .song-title').text(track.title);
+    $('#nowplaying .song-artist').text(track.creator);
+    $('#audio-player source').attr("src", url);
     $('#audio-player')[0].pause();
     $('#audio-player')[0].load();
     $('#audio-player')[0].play();
@@ -223,6 +133,10 @@ var tracks = [{
     });
   };
 
+  var toMinutes = function(seconds) {
+    return (Math.floor(seconds / 60) + ((seconds % 60) / 100)).toFixed(2);
+  }
+
   $('.groovy-blur').click(function () {
     if ($('#resultsbox').is(':visible')) {
       toggleResultsbox();
@@ -236,8 +150,30 @@ var tracks = [{
     toggleSearchbox();
   });
 
+  $('#resultsbox').on('click', 'tr td', function() {
+    var $this = $(this).closest('tr');
+    var song = $this.attr("song");
+    var concert = $this.attr("concert");
+    var uuid = $this.attr("uuid");
+    playSong(concert, song, uuid);
+  });
+
   $('#searchbox-header form').submit(function(event) {
     event.preventDefault();
+
+    setTimeout(function () {
+      for (var t in tracks) {
+        var track = tracks[t];
+        $('#resultsbox table tbody').append(
+          '<tr concert="' + track.concert + '" song="' + track.id +'" uuid="' + t + '">'
+            +'<td>' + track.number + '</td>'
+            +'<td>' + track.title + '</td>'
+            +'<td>' + toMinutes(track.length) + '</td>'
+            + '</tr>'
+        );
+      }
+    }, 300);
+
     toggleSearchbox();
     if (!$('#resultsbox').is(':visible')) {
       toggleResultsbox();
