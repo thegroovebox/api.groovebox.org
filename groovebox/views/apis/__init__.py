@@ -13,18 +13,18 @@
 from flask import render_template
 from flask.views import MethodView
 from views import rest_api
-from api import artists, concerts
+import api
 
 class Artists(MethodView):
     @rest_api
     def get(self, artist=None):
-        _artists = artists()
-        return _artists[artist] if artist else _artists
+        artists = api.artists()
+        return artists[artist] if artist else artists
 
 class Concerts(MethodView):
     @rest_api
-    def get(self, concert=None, track=None):
-        pass
+    def get(self, artist=None, concert=None):
+        return api.concerts(artist=artist, concert=concert)
 
 class Songs(MethodView):
     @rest_api

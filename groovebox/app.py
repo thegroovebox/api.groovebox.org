@@ -17,6 +17,7 @@ import views
 from configs import options
 
 urls = ('/api', apis,
+        '/favicon.ico', views.Favicon,
         '/<path:uri>', views.Base,
         '/', views.Base
         )
@@ -24,4 +25,5 @@ app = router(Flask(__name__), urls)
 
 if __name__ == "__main__":
     app.run(**options)
+
 

@@ -170,8 +170,8 @@ a:hover {
     top: 0px;
     bottom: 0px;
     padding: 20px;
-    background-color: #08091B;
-    border-left: 1px solid rgba(44, 40, 76, 1);
+    background-color: #353652; 
+    border-left: 1px solid rgba(90, 88, 98, 1);
     box-shadow: -5px 0px 10px rgb(24, 25, 31);
     overflow-y: scroll;
 }
@@ -257,6 +257,7 @@ a:hover {
 
 #resultsbox table tbody tr:hover {
     background-color: #1E1F37;
+    cursor: pointer;
 }
 
 .coverart {
@@ -283,10 +284,20 @@ a:hover {
 
 .album-cover {
     background-color: #04040D;
-    margin-bottom: 15px;
+    height: 182px;
+}
+
+#nowplaying .album-cover {
+    margin-bottom: 35px;
+}
+
+.album-cover:hover {
+    opacity: .5;
+    transition: opacity .25s ease-in-out;
 }
 
 .album-cover img {
+    background-color: #08091B;
     width: 100%;
 }
 
@@ -403,9 +414,10 @@ textarea:focus, input:focus {
 }
 
 .fakebutton {
-    opacity: 0.7;
-    background:none;
-    border:none;
+    opacity: .7;
+    background: none;
+    padding: 0px;
+    border: none;
     color: inherit;
 }
 
@@ -415,6 +427,11 @@ textarea:focus, input:focus {
 
 .low-filter {
     opacity: .15;
+}
+
+.low-filter:hover {
+    opacity: .5;
+    transition: opacity .25s ease-in-out;
 }
 
 .genre {    

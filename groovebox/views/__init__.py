@@ -10,9 +10,14 @@
 """
 
 import json
-from flask import render_template, Response
+from flask import render_template, Response, send_from_directory
 from flask.views import MethodView
 from werkzeug import wrappers
+from configs import approot
+
+class Favicon(MethodView):
+    def get(self):
+         return None# send_from_directory('%s/static' % approot, 'favicon.ico')
 
 class Base(MethodView):
     def get(self, uri=None):
@@ -32,7 +37,7 @@ def rest_api(f):
                 return res
             response = Response(json.dumps(res))
         except Exception as e:
-            response = Response(json.dumps(e.__dict__))
+            response = Response(json.dumps(str(e)))
 
         response.headers.add('Content-Type', 'application/json')
         response.headers['Access-Control-Allow-Credentials'] = 'true'
