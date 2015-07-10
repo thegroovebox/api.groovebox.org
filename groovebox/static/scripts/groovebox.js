@@ -162,6 +162,7 @@ var tracks = [
     event.preventDefault();
 
     setTimeout(function () {
+      $("#resultsbox table tbody").empty();
       for (var t in tracks) {
         var track = tracks[t];
         $('#resultsbox table tbody').append(
