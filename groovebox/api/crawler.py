@@ -6,7 +6,7 @@ BASE_URL = "https://archive.org"
 API_URL = "%s/advancedsearch.php" % BASE_URL
 METADATA = "%s/metadata" % BASE_URL
 REQUIRED_KEYS = ['track', 'title', 'album', 'length', 'name', 'creator']
-FILETYPE_PRIORITY = ['flac', 'shn', 'mp3', 'ogg']
+FILETYPE_PRIORITY = ['mp3', 'shn', 'flac', 'ogg']
 
 class Crawler(object):
 
