@@ -5,6 +5,7 @@ from utils import subdict
 BASE_URL = "https://archive.org"
 API_URL = "%s/advancedsearch.php" % BASE_URL
 METADATA = "%s/metadata" % BASE_URL
+COVERART_API_URL = "https://itunes.apple.com/search"
 REQUIRED_KEYS = ['track', 'title', 'album', 'length', 'name', 'creator']
 FILETYPE_PRIORITY = ['mp3', 'shn', 'flac', 'ogg']
 
@@ -41,7 +42,29 @@ class Crawler(object):
             r['tracks'] = cls._tracks(fs)
         except Exception as e:
             return e
+        try:
+            r['artist'] = cls.coverart(r['creator'])
+        except Exception as e:
+            return e
         return r
+
+
+    @staticmethod
+    def coverart(artist, song=""):
+        """http://www.apple.com/itunes/affiliates/resources/documentation
+               /itunes-store-web-service-search-api.html
+        """        
+        keep_keys = ["primaryGenreName", "coverArt"] + \
+            (["collectionName", "trackName", "releaseDate"] if song else [])
+        r = requests.get(COVERART_API_URL, params={
+                "media": "music",
+                "artistName": artist,
+                "term": song or artist, #if no song available
+                "country": "us",
+                "limit": 1
+                }).json()['results'][0]
+        r["coverArt"] = r["artworkUrl100"].replace('.100x100-75', '')
+        return dict([(key, r[key]) for key in keep_keys])
 
 
     @staticmethod

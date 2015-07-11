@@ -81,9 +81,7 @@ var playSong;
     $("#resultsbox table tbody").empty();
     $("#resultsbox header h1").text(results.creator);
     $("#resultsbox header h2").text(results.title);
-    $("#resultsbox .coverart img").attr('src', "");
-
-    // XXX https://github.com/mekarpeles/groovebox.org/issues/2
+    $("#resultsbox .coverart img").attr('src', results.artist.coverArt);
     
     for (var t in results.tracks) {
       var track = results.tracks[t];

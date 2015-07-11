@@ -31,12 +31,10 @@ class Songs(MethodView):
     def get(self, song=None):
         pass
 
-
 urls = (
     '/artists', Artists,
     '/artists/<artist>', Artists,
     '/artists/<artist>/concerts', Concerts,
     '/artists/<artist>/concerts/<concert>', Concerts,
-    '/artists/<artist>/concerts/<concert>/<int:track>', Concerts,
     '/songs/<song>', Songs
     )
