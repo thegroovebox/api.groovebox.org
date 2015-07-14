@@ -5,9 +5,9 @@
     setup.py
     ~~~~~~~~
 
-    no description available
+    Groovebox, Spotify for Internet Archive
 
-    :copyright: (c) 2015 by root.
+    :copyright: (c) 2015 by mek.
     :license: see LICENSE for more details.
 """
 
@@ -38,11 +38,11 @@ def find_version(*file_paths):
 setup(
     name='groovebox',
     version=find_version("groovebox", "__init__.py"),
-    description='no description available',
+    description='A spotify-like Archive.org Music Player',
     long_description=read('README.rst'),
     classifiers=[
         ],
-    author='root',
+    author='mek',
     author_email='',
     url='',
     packages=[
@@ -51,8 +51,6 @@ setup(
     platforms='any',
     license='LICENSE',
     install_requires=[
-        'virtualenv>=1.11.6',
-        'pep8>=1.5.7',
-        'pyflakes>=0.8.1',
+        'whoosh'
         ]
 )

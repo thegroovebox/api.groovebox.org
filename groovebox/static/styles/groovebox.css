@@ -46,6 +46,7 @@ a:hover {
     width: 80px;
     float: left;
     background-color: #1E1F37;
+    z-index: 999;
 }
 
 #userbox {
@@ -126,13 +127,19 @@ a:hover {
 
 #searchbox {
     opacity: 1;
-    display: none;
     position: fixed;
     top: 0px;
     bottom: 0px;
     left: 80px;
     width: 250px;
     background-color: #141424;
+    transform: translateX(-250px);
+    transition: all 0.5s ease;
+}
+
+#searchbox.open {
+    transition: all 0.5s ease;
+    transform: translateX(0px);
 }
 
 #searchbox-header {
@@ -154,27 +161,83 @@ a:hover {
     width: 160px;
 }
 #searchbox-results {
-    padding: 0px 20px;
+    overflow-y: scroll;
+    position: absolute;
+    top: 85px;
+    bottom: 0px;
+    width: 100%;
 }
 
 #searchbox-results h2 {
     font-weight: normal;
     font-size: 1em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#searchbox-results ul {
+    list-style-type: none;
+    padding: 0px 15px;
+}
+
+#searchbox-results::-webkit-scrollbar { width: .5em; background-color: #141424;}
+#searchbox-results::-webkit-scrollbar-thumb {
+    height: 20px; background-color: rgb(74, 75, 97); border-radius: 5px;
+}
+
+#searchbox-results ul li {
+    cursor: pointer;
+    padding: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+    font-size: .8em;
+    background-color: #1D1E30; /*#1A1A37;*/
+}
+
+#searchbox-results ul li:hover {
+    background-color: #282849; /*#323254;*/
+    transition: background-color 0.5s ease;
+    color: #fff;
+}
+
+#searchbox-results ul li h2 {
+    font-weight: normal;    
+    margin: 0px;
+    margin-bottom: 5px;
+}
+
+#searchbox-results ul li h3 {
+    color: #676CD7;
+    font-weight: normal;
+    margin: 0px;
+    font-size: .9em;
 }
 
 #resultsbox {
-    display: none;
     position: fixed;
     right: 250px;
     left: 300px;
     top: 0px;
     bottom: 0px;
     padding: 20px;
-    background-color: #353652; 
-    border-left: 1px solid rgba(90, 88, 98, 1);
+    background-color: #121224;
+    border-left: 1px solid rgba(46, 37, 84, 1);
+/*    background-color: #353652; 
+    border-left: 1px solid rgba(90, 88, 98, 1); */
     box-shadow: -5px 0px 10px rgb(24, 25, 31);
     overflow-y: scroll;
+    transform: translateX(110%);
+    transition: all 0.5s ease-out;
 }
+
+#resultsbox.open {
+    transition: all 0.5s ease;
+    transform: translateX(0px);
+}
+
 
 #resultsbox::-webkit-scrollbar { width: .5em; background-color: #1E1F37;}
 #resultsbox::-webkit-scrollbar-thumb {
@@ -253,7 +316,11 @@ a:hover {
 }
 
 #resultsbox table tr td:last-child {
-    width: 100px;
+    width: 10px;
+}
+
+#resultsbox table tr td:nth-last-child(2) {
+    width: 50px;
 }
 
 #resultsbox table tbody tr:hover {
@@ -283,6 +350,55 @@ a:hover {
     margin: 20px;
 }
 
+#playbox #history {
+    margin: 15px;
+}
+
+#playbox #history h1 {
+    margin: 0px;
+    padding: 0px;
+    font-size: 1em;
+    font-weight: normal;
+}
+
+#playbox #history ul.queue { 
+    position: fixed;
+    top: 370px;
+    bottom: 0px;
+    margin: 0px;
+    margin-top: 5px;
+    padding: 0px;
+    padding-top: 4px;
+    list-style-type: none;
+    width: 220px;
+    background-color: rgba(20, 20, 36, 1); /*rgba(74, 75, 97, 0.34);*/
+    overflow-y: scroll;
+}
+
+#playbox #history ul.queue li { 
+    background-color: #1D1E30;
+    margin: 1px 5px;
+    cursor: pointer;
+    padding: 10px;
+    font-size: .9em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+#playbox #history ul.queue li span.track-play{ 
+    width: 50px;
+}
+
+#playbox #history ul.queue li span.track-remove {
+    float: right;
+}
+
+ul.queue::-webkit-scrollbar { width: .5em; background-color: #141424;}
+ul.queue::-webkit-scrollbar-thumb {
+    height: 20px; background-color: rgb(74, 75, 97); border-radius: 5px;
+}
+
 .album-cover {
     background-color: #04040D;
     height: 182px;
@@ -308,6 +424,9 @@ a:hover {
     text-align: center;
     font-weight: normal;
     font-size: 1em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 #nowplaying h3 {
@@ -315,6 +434,9 @@ a:hover {
     text-align: center;
     font-weight: normal;
     font-size: .7em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 #audio-player {
@@ -390,12 +512,14 @@ ul.albums li:last-child {
     font-size: .9em;
     font-weight: normal;    
     text-overflow: ellipsis;
+    white-space: nowrap;
 } 
 
 .section .albums li.album .album-details h3 {
     font-size: .8em;
     font-weight: normal;
     text-overflow: ellipsis;
+    white-space: nowrap;
     width: 170px;
 }
 

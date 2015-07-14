@@ -32,3 +32,5 @@ HOST = config.getdef("server", "host", '0.0.0.0')
 PORT = int(config.getdef("server", "port", 8080))
 DEBUG = bool(int(config.getdef("server", "debug", 1)))
 options = {'debug': DEBUG, 'host': HOST, 'port': PORT}
+
+SONG_DB = '%s/%s' % (approot, config.getdef("storage", "songdb", 'crawls/songs'))

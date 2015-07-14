@@ -17,7 +17,7 @@ from configs import approot
 
 class Favicon(MethodView):
     def get(self):
-         return None# send_from_directory('%s/static' % approot, 'favicon.ico')
+         return ""# send_from_directory('%s/static' % approot, 'favicon.ico')
 
 class Base(MethodView):
     def get(self, uri=None):
