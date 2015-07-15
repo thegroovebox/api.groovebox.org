@@ -18,7 +18,7 @@ import shelve
 from whoosh.index import create_in
 from whoosh.fields import Schema, ID, TEXT
 from utils import subdict
-from configs import approot, SONG_DB
+from configs import approot, SONG_DB, INDEX_DB
 
 BASE_URL = "https://archive.org"
 API_URL = "%s/advancedsearch.php" % BASE_URL
@@ -27,33 +27,84 @@ COVERART_API_URL = "https://itunes.apple.com/search"
 REQUIRED_KEYS = ['track', 'title', 'album', 'length', 'name', 'creator']
 FILETYPE_PRIORITY = ['mp3', 'shn', 'flac', 'ogg']
 
+
 class Worker(object):
-        
+
+
+    @classmethod
+    def coldstart(cls):
+        cls.register_artists(concerts=True)
+        cls.crawl()
+        cls.index()
+
+
+    @classmethod
+    def register_artist(cls, artist, concerts=False, db=SONG_DB):
+        """Register an artist with groovebox:
+        - create a shelve for artist
+        - add artist to @master shelve
+        """
+        # Creates a master index of artists
+        with shelve.open("%s/@master" % db) as master:
+            if not master.get('artists'):
+                master['artists'] = [artist]
+            else:
+                master['artists'].append(artist)
+
+        # Creates an emptry shelve for each artist
+        with shelve.open("%s/%s" % (db, artist)) as storage:                
+            if concerts:
+                for concert in Crawler.concerts(artist):
+                    print(concert)
+                    storage[concert] = {}        
+
+
+    @classmethod
+    def register_artists(cls, concerts=False, db=SONG_DB):
+        """Creates a shelve for each artist in the Archive.org Live
+        Music collection and registers artists in @master shelve
+
+        >>> import api;api.crawler.Worker.register_artists(concerts=True)
+        """
+        for artist in Crawler.artists():
+            print(artist)
+            cls.register_artist(artist, concerts=concerts, db=db)
+
+
+    @classmethod
+    def register_concerts(artist, db=SONG_DB):
+        """Registers a single artist's concerts to its shelve data store"""
+        with shelve.open("%s/%s" % (db, artist)) as storage:
+            for concert in Crawler.concerts(artist):
+                storage[concert] = {}
+
+
     @staticmethod
-    def register_songs(db, artist, concert):
+    def register_songs(shelf, artist, concert):
         """Registers the songs from a concert. Constructs a dictionary
         of track names within this concert mapped to metadata.
         
         params:
-            db - a `shelve` instance
+            shelf - a `shelve` instance
             artist - the collection / Archive.org id of artist 
         """
         for track in Crawler.tracks(concert):
             title = track.get('title')
             track['concert'] = concert
-            if title in db:
-                if artist in db[title]:
-                    db[title][artist].append(track)
+            if title in shelf:
+                if artist in shelf[title]:
+                    shelf[title][artist].append(track)
                 else:
-                    db[title][artist] = [track]
+                    shelf[title][artist] = [track]
             else:
-                db[title] = {artist: [track]}
+                shelf[title] = {artist: [track]}
+
 
     @classmethod
     def crawl_artist(cls, artist, artists=None, db=SONG_DB):
-        """
-        Crawls a single artists concerts and adds their songs/tracks
-        to the shelve database (whose name is specified by `db`).
+        """Crawls a single artists concerts and adds their
+        songs/tracks to the shelve database (whose name is specified
+        by `db`).
 
         If no 'artists' dict is provided, assume this is a one off
         crawl of a single artist and then rebuild the song_index.json
@@ -65,18 +116,19 @@ class Worker(object):
                       the artist itself in concerts.json
             db - the shelve db where data is read/written from
         """        
-        concerts = artists[artist]['concerts'] if artists else \
-            json.load(open('static/data/concerts.json', 'r'))[artist]['concerts']
+        concerts = artists[artist]['concerts'] or \
+            shelve.open('%s/%s' % (db, artist))['concerts']
+
         for concert in concerts:
             print(concert)
-            with shelve.open(db) as index:
-                cls.register_songs(index, artist, concert)
+            with shelve.open(db) as shelf:
+                cls.register_songs(shelf, artist, concert)
         if not artists:
             cls.build_song_list(db=db)
 
 
     @classmethod
-    def crawl(cls, db=SONG_DB, start=0, end=None, artist=None):
+    def crawl(cls, start=0, end=None, artist=None, db=SONG_DB):
         """Crawls all artist's concerts and build an index of their
         songs, keyed by song name. Results are stored in a shelve db.
 
@@ -89,40 +141,58 @@ class Worker(object):
           }
 
         """
-        artists = json.load(open('static/data/concerts.json', 'r'))
-        for i, artist in enumerate(artists):
-            print(artist)
-            if i >= start:
-                if not end or i < end:
-                    cls.crawl_artist(artist, artists=artists, db=db)
-        cls.build_song_list(db=db)
+        with shelve.open("%s/@master" % db) as master:
+            artists = master['artists']
+            for i, artist in enumerate(artists):
+                print(artist)
+                if i >= start:
+                    if not end or i < end:
+                        cls.crawl_artist(artist, artists=artists, db=db)
 
 
     @classmethod
-    def build_song_list(cls, db=SONG_DB):
-        """Build an index/list of unique song names mapped to int id"""
-        with shelve.open(db) as tracks:
-            with open('%s/static/data/song_index.json' % approot, 'w') as song_index:
-                json.dump(list(tracks.keys()), song_index)
+    def build_index(db=SONG_DB):
+        """Creates a searchable index by iterating over every artist's
+        shelve and inserting each song, along with its identifiers
+        """
+        schema = Schema(song=TEXT(stored=True),
+                        artist=TEXT(stored=True),
+                        artist_id=TEXT(stored=True),                        
+                        concert=ID(stored=True),
+                        file_id=ID(stored=True))
+        ix = create_in(INDEX_DB, schema)
+        write = ix.write()
 
-
-    @staticmethod
-    def build_search_index(db=SONG_DB):
-        """Rebuild the whoosh search index of songs"""
-        song_index = json.load(open('static/data/song_index.json', 'r'))
-        schema = Schema(song=TEXT(stored=True), index=ID(stored=True))
-        ix = create_in("%s/index" % approot, schema)
-        writer = ix.writer()
-        
-        for i, song in enumerate(song_index):
-            writer.add_document(song=song, index=str(i+1))
+        with shelve.open("%s/@master" % db) as master:
+            artists = master['artists']
+            for artist in artists:
+                with shelve.open("%s/@master" % db) as shelf:
+                    concerts = shelf['concerts']
+                    for concert in concerts:
+                        for song in concert:
+                            writer.add_document(song=song['title'],
+                                                artist=song['artist'], 
+                                                artist_id=artist,
+                                                concert_id=concert)
         writer.commit()
-
+                                                
 
 class Crawler(object):
 
-    def __init__(self):
-        pass
+
+    @staticmethod
+    def artists(limit=10000):
+        """Retrieves a list of artists from the Archive.org Live Music
+        collection
+        """
+        params = {
+            "q": "collection:(etree) AND mediatype:(collection)",
+            "fl[]": "identifier",
+            "rows": limit,
+            "output": "json"
+            }
+        rs = requests.get(API_URL , params=params).json()
+        return [r['identifier'] for r in rs['response']['docs']]
 
 
     @staticmethod
@@ -138,8 +208,8 @@ class Crawler(object):
             "rows": limit,
             "output": "json"
             }
-        return requests.get(API_URL, params=params).json()
-
+        rs = requests.get(API_URL, params=params).json()
+        return [r['identifier'] for r in rs['response']['docs']]
 
     @classmethod
     def concert(cls, c):
