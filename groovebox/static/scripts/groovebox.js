@@ -1,13 +1,3 @@
-function debounce(fn, delay) {
-  var timer = null;
-  return function () {
-    var context = this, args = arguments;
-    clearTimeout(timer);
-    timer = setTimeout(function () {
-      fn.apply(context, args);
-    }, delay);
-  };
-}
 
 var throttle = function(fn, threshhold, scope) {
   threshhold || (threshhold = 250);
@@ -32,40 +22,88 @@ var throttle = function(fn, threshhold, scope) {
   };
 }
 
-
-var playSong;
+var playSong, stopSong, nextSong, toggleRepeat, queueSong, queueClear;
 (function () {
   'use strict';
   var baseurl = "https://archive.org/download/"
-
-  /*
-  @media all and (max-width: 900px) {}
-  if (document.documentElement.clientWidth < 900) {}
-  */
-
-  var queueSong = function(concertId, fileId, title, artist) {
-    $('#playbox #history ul.queue').append(
-      '<li artist="' + artist + '" concert="' + concertId
-        + '" song="' + fileId +'" title="' + title + '">'
-        + '<span class="track-remove"><i class="fa fa-times-circle"></i></span>'
-        + '<span class="track-play">' + title + '</span>'
-        + '</li>'
-    );
+  var extractTrack = function($this) {
+    return {
+      artist: $this.attr('artist'),
+      concert: $this.attr('concert'),
+      song: $this.attr('song'),
+      title: $this.attr('title')
+    }
   }
 
-  playSong = function(concertId, fileId, title, artist) {
-    var url = baseurl + concertId + "/" + fileId;
+  toggleRepeat = function() { queue.repeat = !queue.repeat; }
+  var setPosition = function(pos) {
+    queue.pos = pos
+    $('#playbox #history ul.queue li.selected').removeClass('selected');
+    $('#playbox #history ul.queue li').eq(queue.pos).addClass('selected');
+  }
+  var queue = {
+    pos: 0, // the index of the queue
+    pop: true, // remove after playing
+    repeat: false,
+    shuffle: false,
+    startover: false,
+    length: function() { return $('#playbox #history ul.queue li').length },
+    select: setPosition
+  };
 
-    //XXX use /api to get metadata coverart
+  /* Returns the track at index within the play queue */
+  var getQueueSong = function(index) {
+    var $this = $('#playbox #history ul.queue li').eq(index);
+    return extractTrack($this);
+  }
+
+  nextSong = function() {
+    if (queue.repeat) {
+      playSong(getQueueSong(queue.pos));      
+    }
+    queue.select((queue.pos + 1) % queue.length());
+    if (queue.pos > 0 || (queue.pos === 0 && queue.startover)) {
+      playSong(getQueueSong(queue.pos));
+    } else {
+      $('#playbox #history ul.queue li.selected').removeClass('selected');
+    }
+  }
+
+  queueSong = function(track) {
+    $('#playbox #history ul.queue').append(
+      '<li artist="' + track.artist + '" concert="' + track.concert
+        + '" song="' + track.song +'" title="' + track.title + '">'
+        + '<span class="track-play">' + track.title + '</span>'
+        + '<span class="track-remove"><i class="fa fa-times-circle"></i></span>'
+        + '</li>'
+    );
+    return queue.length()-1;
+  }
+
+  queueClear = function() {
+    stopSong();
+    queue.pos = 0;
+    $('#playbox #history ul.queue li.selected').removeClass('selected');
+    $('#playbox #history ul.queue').empty();
+  }
+
+  playSong = function(track) {
+    //XXX use /api to get metadata coverart -- open issue    
     var src = $('#resultsbox .coverart img').attr('src');
-
+    var url = baseurl + track.concert + "/" + track.song;
     $('#nowplaying .album-cover img').attr("src", src);
-    $('#nowplaying .song-title').text(title);
-    $('#nowplaying .song-artist').text(artist);
+    $('#nowplaying .song-title').text(track.title);
+    $('#nowplaying .song-artist').text(track.artist);
     $('#audio-player source').attr("src", url);
     $('#audio-player')[0].pause();
     $('#audio-player')[0].load();
     $('#audio-player')[0].play();
+  }
+
+  stopSong = function() {
+    $('#audio-player')[0].pause();
+    $('#audio-player source').attr("src", "");    
+    $('#audio-player')[0].load();
   }
 
   var toggleSearchbox = function() {
@@ -155,20 +193,13 @@ var playSong;
     }
   }
 
-  // On Search
+  // On search typing
   $('#searchbox-header form').submit(function(event) { event.preventDefault(); });
-  $('#searchbox-header form').keyup(debounce(function(event) {
-    throttle(function(event) {
-      search($('#search-query').val(), function(results) {
-        populateSearchMatches(results);
-      });
-      
-      //toggleSearchbox();
-      //if (!$('#resultsbox').hasClass('open')) {
-      //  toggleResultsbox();
-      //}
-    }, 400)();
-  }, 250));
+  $('#searchbox-header form').keyup(throttle(function(event) {
+    search($('#search-query').val(), function(results) {
+      populateSearchMatches(results);
+    });
+  }, 600));
 
   $('#blur-search').click(function() {
     if($('#searchbox').hasClass('open')) {
@@ -188,37 +219,49 @@ var playSong;
 
   $('#resultsbox').on('click', 'tr td.playable', function() {
     var $this = $(this).closest('tr');
-    var artist = $this.attr('artist')
-    var concertId = $this.attr('concert');
-    var songId = $this.attr('song');
-    var title = $this.attr('title')
-    playSong(concertId, songId, title, artist);
+    var track = extractTrack($this);          
+    queue.select(queueSong(track));
+    playSong(track);
   });
 
   /* Play song from queue */
-  $('#playbox #history ul.queue')
+  $('#playbox #history ul.queue')  
     .on('click', 'li span.track-play', function() {
       var $this = $(this).closest('li');
-      var artist = $this.attr('artist')
-      var concertId = $this.attr('concert');
-      var songId = $this.attr('song');
-      var title = $this.attr('title')
-      playSong(concertId, songId, title, artist);
+      queue.select($this.index('#playbox #history ul.queue li'));
+      playSong(extractTrack($this));
     });
 
   /* dequeue song*/
   $('#playbox #history ul.queue').on('click', 'li span.track-remove', function() {
-      $(this).closest('li').remove();
-    });
+    var $this = $(this).closest('li');
+    var index = $this.index('#playbox #history ul.queue li');
+    $this.remove()
+
+    if (queue.pos === index) {      
+      stopSong();
+      if(queue.pos === (queue.length()-1)) {
+        queue.select(queue.pos % (queue.length()-1));
+      }
+    } else {
+      // if the song is before current queue.pos, update pos
+      if (index < queue.pos) {
+        queue.select(queue.pos - 1);
+      }
+    }
+  });
+
   
   /* If track '+' clicked in resultsbox, add to queue */
   $('#resultsbox table tbody').on('click', 'tr td.track-queue', function() {
     var $this = $(this).closest('tr');
-    var artist = $this.attr('artist')
-    var concertId = $this.attr('concert');
-    var songId = $this.attr('song');
-    var title = $this.attr('title');
-    queueSong(concertId, songId, title, artist);
+    var track = {
+      artist: $this.attr('artist'),
+      concert: $this.attr('concert'),
+      song: $this.attr('song'),
+      title: $this.attr('title')
+    }
+    queueSong(track);
   });
 
   /* If search result is clicked, play song and/or load concert tracks in resultsbox */

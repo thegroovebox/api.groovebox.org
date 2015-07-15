@@ -361,6 +361,14 @@ a:hover {
     font-weight: normal;
 }
 
+#history h1 {
+    float: left;
+}
+
+#queue-controls {
+    float: right;
+}
+
 #playbox #history ul.queue { 
     position: fixed;
     top: 370px;
@@ -386,12 +394,22 @@ a:hover {
     overflow: hidden;
 }
 
-#playbox #history ul.queue li span.track-play{ 
-    width: 50px;
+#playbox #history ul.queue li.selected {
+    background-color: #2D2D57;
+}
+
+#playbox #history ul.queue li span.track-play {
+    width: 170px;
+    float: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-right: 10px;    
 }
 
 #playbox #history ul.queue li span.track-remove {
-    float: right;
+    position: absolute;
+    right: 12px;
+    width: 12px;
 }
 
 ul.queue::-webkit-scrollbar { width: .5em; background-color: #141424;}
@@ -414,7 +432,7 @@ ul.queue::-webkit-scrollbar-thumb {
 }
 
 .album-cover img {
-    background-color: #08091B;
+    background-color: #fff;
     width: 100%;
 }
 

@@ -1,15 +1,15 @@
         <div id="playbox">
           <div id="nowplaying">
             <div class="album-cover">
-              <img src="http://ecx.images-amazon.com/images/I/51W4HVNFT2L._SX300_.jpg"/>
+              <img src="https://ia600606.us.archive.org/19/items/internetarchivebooks/archive-logo-300.png"/>
             </div>
             <div class="song-details">
-              <h2 class="song-title">Shakedown Street</h2>
-              <h3 class="song-artist">Grateful Dead</h3>
+              <h2 class="song-title">Groovebox</h2>
+              <h3 class="song-artist">Shake it!</h3>
             </div>
             <div class="audio-controls">
-              <audio controls id="audio-player">
-                <source src="https://archive.org/download/shakedownst2010-12-22/shakedownst2010-12-22d1t06.ogg" />
+              <audio controls id="audio-player" onended="nextSong()">
+                <source src="" />
                 <!--<source src="https:/shakedownst2010-12-22d1t06.ogg" type="audio/ogg" />-->
                 
                 <em>Sorry, your browser doesn't support HTML5 audio.</em>
@@ -18,16 +18,18 @@
           </div>
           <div id="history">
             <h1>Queue</h1>
+            <div id="queue-controls">              
+              <button class="fakebutton" title="Start Over">
+                <i class="fa fa-recycle"></i>
+              </button>
+              <button class="fakebutton" onclick="toggleRepeat()" title="Play song on repeat">
+                <i class="fa fa-repeat"></i>
+              </button>
+              <button class="fakebutton" onclick="queueClear()" title="Clear queue">
+                <i class="fa fa-eraser"></i>
+              </button>
+            </div>
             <ul class="queue">
-              <li artist="" artist="Grateful Dead" concert="shakedownst2010-12-22" 
-                  song="shakedownst2010-12-22d1t06.ogg" title="Shakedown Street">
-                <span class="track-play">
-                  Shakedown Street
-                </span>
-                <span class="track-remove">
-                  <i class="fa fa-times-circle"></i>
-                </span>
-              </li>
             </ul>
           </div>
         </div>
