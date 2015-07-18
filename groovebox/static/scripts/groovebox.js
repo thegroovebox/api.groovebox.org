@@ -1,4 +1,24 @@
 
+var debounce = function (func, threshold, execAsap) {
+  var timeout;
+
+  return function debounced () {
+    var obj = this, args = arguments;
+    function delayed () {
+      if (!execAsap)
+        func.apply(obj, args);
+      timeout = null;
+    };
+
+    if (timeout)
+      clearTimeout(timeout);
+    else if (execAsap)
+      func.apply(obj, args);
+
+    timeout = setTimeout(delayed, threshold || 100);
+  };
+}
+
 var throttle = function(fn, threshhold, scope) {
   threshhold || (threshhold = 250);
   var last,
@@ -35,6 +55,7 @@ var playSong, stopSong, nextSong, toggleRepeat, queueSong, queueClear;
     }
   }
 
+  var req;
   toggleRepeat = function() { queue.repeat = !queue.repeat; }
   var setPosition = function(pos) {
     queue.pos = pos
@@ -70,6 +91,7 @@ var playSong, stopSong, nextSong, toggleRepeat, queueSong, queueClear;
   }
 
   queueSong = function(track) {
+    console.log(track);
     $('#playbox #history ul.queue').append(
       '<li artist="' + track.artist + '" concert="' + track.concert
         + '" song="' + track.song +'" title="' + track.title + '">'
@@ -92,7 +114,7 @@ var playSong, stopSong, nextSong, toggleRepeat, queueSong, queueClear;
     var src = $('#resultsbox .coverart img').attr('src');
     var url = baseurl + track.concert + "/" + track.song;
     $('#nowplaying .album-cover img').attr("src", src);
-    $('#nowplaying .song-title').text(track.title);
+    $('#nowplaying .song-title').text(track.name);
     $('#nowplaying .song-artist').text(track.artist);
     $('#audio-player source').attr("src", url);
     $('#audio-player')[0].pause();
@@ -127,7 +149,7 @@ var playSong, stopSong, nextSong, toggleRepeat, queueSong, queueClear;
 
   var toMinutes = function(seconds) {
     // Some songs, like mp3, are already in duration of minutes.
-    if (seconds.indexOf(':') != -1) {
+    if (isNaN || seconds.indexOf(':') != -1) {
       return seconds;
     }
     return (Math.floor(seconds / 60) + ((seconds % 60) / 100))
@@ -136,10 +158,18 @@ var playSong, stopSong, nextSong, toggleRepeat, queueSong, queueClear;
 
   var search = function(query, callback) {
     var url = 'api/search?q=' + query;
-    $.get(url, function(results) {
+    req = $.get(url, function(results) {
     }).done(function(data) {
       if (callback) { callback(data); }
     });
+  }
+
+  var getArtist = function(artist, callback) {
+    var url = 'api/artists/' + artist;
+    $.get(url, function(results) {
+    }).done(function(data) {
+      if (callback) { callback(data); }
+    });    
   }
 
   var getConcert = function(artist, concert, callback) {
@@ -152,36 +182,34 @@ var playSong, stopSong, nextSong, toggleRepeat, queueSong, queueClear;
 
   var populateSearchMatches = function(results, callback) {
     $("#searchbox-results ul").empty();
-    for (var result in results) {
-      for (var artist in results[result]) {
-        for (var trackid in results[result][artist]) {
-          var track = results[result][artist][trackid];
-          $('#searchbox-results ul').append(
-            '<li artist="' + artist + '" concert="' + track.concert
-              + '" song="' + track.name +'" title="' + track.title + '">'
-              + '<h2 class="result-track">' + track.title + '</h2>'
-              + '<h3 class="result-artist">' + artist + '</h3>'
-              + '</li>'
-          );
-        }
-      }
+    var artists = results.artists;
+    var tracks = results.tracks;
+    for (var t in tracks) {
+      var track = tracks[t];
+      $('#searchbox-results ul').append(
+        '<li artist="' + track.artist_id + '" concert="' + track.item_id
+          + '" song="' + track.file_id +'" title="' + track.name + '">'
+          + '<h2 class="result-track">' + track.name + '</h2>'
+          + '<h3 class="result-artist">' + track.artist + '</h3>'
+          + '</li>'
+      );
     }
     if (callback) { callback(); }
-  }  
+  }
 
-  var populateResultsTable = function(results, callback) {
+  var populateResultsTable = function(item, callback) {
     $("#resultsbox table tbody").empty();
-    $("#resultsbox header h1").text(results.creator);
-    $("#resultsbox header h2").text(results.title);
-    $("#resultsbox .coverart img").attr('src', results.metadata.coverArt);
+    $("#resultsbox header h1").text(item.artist);
+    $("#resultsbox header h2").text(item.name);
+    $("#resultsbox .coverart img").attr('src', item.metadata.coverArt);
     
-    for (var t in results.tracks) {
-      var track = results.tracks[t];
+    for (var t in item.tracks) {
+      var track = item.tracks[t];
       $('#resultsbox table tbody').append(
-        '<tr artist="' + results.creator + '" concert="' + results.identifier
-          + '" song="' + track.name +'" title="' + track.title + '">'
-          +'<td class="playable">' + track.track + '</td>'
-          +'<td class="playable">' + track.title + '</td>'
+        '<tr artist="' + track.artist + '" concert="' + track.item_id
+          + '" song="' + track.file_id +'" title="' + track.name + '">'
+          +'<td class="playable">' + track.number + '</td>'
+          +'<td class="playable">' + track.name + '</td>'
           +'<td class="playable">' + toMinutes(track.length) + '</td>'
           +'<td class="track-queue"><i class="fa fa-plus-circle"></i></td>'
           + '</tr>'
@@ -195,11 +223,12 @@ var playSong, stopSong, nextSong, toggleRepeat, queueSong, queueClear;
 
   // On search typing
   $('#searchbox-header form').submit(function(event) { event.preventDefault(); });
-  $('#searchbox-header form').keyup(throttle(function(event) {
+  $('#searchbox-header form').keyup(debounce(function(event) {
+    //if (req) { req.abort(); } 
     search($('#search-query').val(), function(results) {
       populateSearchMatches(results);
     });
-  }, 600));
+  }, 200, true));
 
   $('#blur-search').click(function() {
     if($('#searchbox').hasClass('open')) {
@@ -250,8 +279,7 @@ var playSong, stopSong, nextSong, toggleRepeat, queueSong, queueClear;
       }
     }
   });
-
-  
+ 
   /* If track '+' clicked in resultsbox, add to queue */
   $('#resultsbox table tbody').on('click', 'tr td.track-queue', function() {
     var $this = $(this).closest('tr');

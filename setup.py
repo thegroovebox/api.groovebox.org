@@ -51,6 +51,10 @@ setup(
     platforms='any',
     license='LICENSE',
     install_requires=[
-        'whoosh'
+        'Flask >= 0.10.1',
+        'Flask-Routing',
+        'psycopg2 >= 2.5.1',
+        'requests >= 1.2.3',
+        'sqlalchemy >= 1.0.6'
         ]
 )

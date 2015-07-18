@@ -10,9 +10,11 @@
 """
 
 import json
+from bson import json_util
 from flask import render_template, Response, send_from_directory
 from flask.views import MethodView
 from werkzeug import wrappers
+from api import DBSession
 from configs import approot
 
 class Favicon(MethodView):
@@ -32,14 +34,18 @@ def rest_api(f):
     """Decorator to allow routes to return json"""
     def inner(*args, **kwargs):
         try:
-            res = f(*args, **kwargs)
-            if isinstance(res, wrappers.Response):
-                return res
-            response = Response(json.dumps(res))
-        except Exception as e:
-            response = Response(json.dumps(str(e)))
+            try:
+                res = f(*args, **kwargs)
+                if isinstance(res, wrappers.Response):
+                    return res
+                response = Response(json.dumps(res, default=json_util.default))
+            except Exception as e:
+                response = Response(json.dumps(str(e)))
 
-        response.headers.add('Content-Type', 'application/json')
-        response.headers['Access-Control-Allow-Credentials'] = 'true'
-        return response
+            response.headers.add('Content-Type', 'application/json')
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
+            return response
+        finally:
+            DBSession.rollback()
+            DBSession.remove()
     return inner
