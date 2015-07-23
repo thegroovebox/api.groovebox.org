@@ -16,4 +16,4 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 from configs import DB_URI, DEBUG
 
 engine = create_engine(DB_URI, echo=DEBUG, client_encoding='utf8')
-DBSession = scoped_session(sessionmaker(bind=engine))
+db = scoped_session(sessionmaker(bind=engine))

@@ -1,3 +1,12 @@
+var getJsonFromUrl = function () {
+  var query = location.search.substr(1);
+  var result = {};
+  query.split("&").forEach(function(part) {
+    var item = part.split("=");
+    result[item[0]] = decodeURIComponent(item[1]);
+  });
+  return result;
+}
 
 var debounce = function (func, threshold, execAsap) {
   var timeout;
@@ -19,43 +28,24 @@ var debounce = function (func, threshold, execAsap) {
   };
 }
 
-var throttle = function(fn, threshhold, scope) {
-  threshhold || (threshhold = 250);
-  var last,
-  deferTimer;
-  return function () {
-    var context = scope || this;
+var playSong, stopSong, nextSong, toggleRepeat, queueSong, queueExport, queueClear;
+var getGenreArtists, getArtist, getAlbum, getConcert, getSong, getTrack;
 
-    var now = +new Date,
-    args = arguments;
-    if (last && now < last + threshhold) {
-      // hold on to it
-      clearTimeout(deferTimer);
-      deferTimer = setTimeout(function () {
-        last = now;
-        fn.apply(context, args);
-      }, threshhold);
-    } else {
-      last = now;
-      fn.apply(context, args);
-    }
-  };
-}
-
-var playSong, stopSong, nextSong, toggleRepeat, queueSong, queueClear;
 (function () {
-  'use strict';
-  var baseurl = "https://archive.org/download/"
+  'use strict';  
+  var baseurl = "https://archive.org/download/";
+  var defaultCoverArt = "https://ia600606.us.archive.org/19/items/internetarchivebooks/archive-logo-300.png";
   var extractTrack = function($this) {
     return {
       artist: $this.attr('artist'),
+      aid: $this.attr('aid'),
       concert: $this.attr('concert'),
       song: $this.attr('song'),
-      title: $this.attr('title')
+      title: $this.attr('title'),
+      sid: $this.attr('sid')
     }
-  }
+  };
 
-  var req;
   toggleRepeat = function() { queue.repeat = !queue.repeat; }
   var setPosition = function(pos) {
     queue.pos = pos
@@ -80,7 +70,7 @@ var playSong, stopSong, nextSong, toggleRepeat, queueSong, queueClear;
 
   nextSong = function() {
     if (queue.repeat) {
-      playSong(getQueueSong(queue.pos));      
+      playSong(getQueueSong(queue.pos));
     }
     queue.select((queue.pos + 1) % queue.length());
     if (queue.pos > 0 || (queue.pos === 0 && queue.startover)) {
@@ -91,15 +81,26 @@ var playSong, stopSong, nextSong, toggleRepeat, queueSong, queueClear;
   }
 
   queueSong = function(track) {
-    console.log(track);
     $('#playbox #history ul.queue').append(
       '<li artist="' + track.artist + '" concert="' + track.concert
-        + '" song="' + track.song +'" title="' + track.title + '">'
+        + '" song="' + track.song +'" title="' + track.title 
+        + '" sid="' + track.sid + '" aid="' + track.artist.tag + '">'
         + '<span class="track-play">' + track.title + '</span>'
         + '<span class="track-remove"><i class="fa fa-times-circle"></i></span>'
+        + '<span class="track-remove"><i class="fa fa-times-circle"></i></span>'
+        + '<div class="track-artist"><span>' + track.artist +  '</span></div>'
         + '</li>'
     );
     return queue.length()-1;
+  }
+
+  queueExport = function (){
+    var sids = [];
+    $('#playbox #history ul.queue li').each(function(){
+      sids.push($(this).attr('sid'));
+    });
+    prompt("Here's a link to your groovebox playlist!",
+           window.location.hostname + "?queue=" + sids.join());
   }
 
   queueClear = function() {
@@ -140,17 +141,23 @@ var playSong, stopSong, nextSong, toggleRepeat, queueSong, queueClear;
 
   var toggleResultsbox = function() {
     $('#blur-results').fadeToggle(500);
+    $('#results-toggler').show();
     if ($('#resultsbox').hasClass('open')) {
       $('#resultsbox').removeClass('open');
+      $('#results-toggler .expand-arrow i').removeClass('fa-rotate-180');
     } else {
       $('#resultsbox').addClass('open');
+      $('#results-toggler .expand-arrow i').addClass('fa-rotate-180');
     }
   };
 
   var toMinutes = function(seconds) {
     // Some songs, like mp3, are already in duration of minutes.
-    if (isNaN || seconds.indexOf(':') != -1) {
-      return seconds;
+    if (isNaN(seconds)) {
+      if (seconds.indexOf(':') != -1) {
+        return seconds;
+      }
+      seconds = parseInt(seconds);
     }
     return (Math.floor(seconds / 60) + ((seconds % 60) / 100))
       .toFixed(2).toString().replace('.', ':');
@@ -158,13 +165,21 @@ var playSong, stopSong, nextSong, toggleRepeat, queueSong, queueClear;
 
   var search = function(query, callback) {
     var url = 'api/search?q=' + query;
-    req = $.get(url, function(results) {
+    $.get(url, function(results) {
     }).done(function(data) {
       if (callback) { callback(data); }
     });
   }
 
-  var getArtist = function(artist, callback) {
+  getGenreArtists = function(artist, callback) {
+    var url = 'api/genres/' + genres + '?artists=1';
+    $.get(url, function(results) {
+    }).done(function(data) {
+      if (callback) { callback(data); }
+    });    
+  }
+
+  getArtist = function(artist, callback) {
     var url = 'api/artists/' + artist;
     $.get(url, function(results) {
     }).done(function(data) {
@@ -172,8 +187,24 @@ var playSong, stopSong, nextSong, toggleRepeat, queueSong, queueClear;
     });    
   }
 
-  var getConcert = function(artist, concert, callback) {
+  getAlbum = function(artist, callback) {
+    var url = 'api/artists/' + artist + '/albums/' + concert;
+    $.get(url, function(results) {
+    }).done(function(data) {
+      if (callback) { callback(data); }
+    });
+  }
+
+  getConcert = function(artist, concert, callback) {
     var url = 'api/artists/' + artist + '/concerts/' + concert;
+    $.get(url, function(results) {
+    }).done(function(data) {
+      if (callback) { callback(data); }
+    });
+  }
+
+  getTrack = function(track_id, callback) {
+    var url = 'api/tracks/' + track_id;
     $.get(url, function(results) {
     }).done(function(data) {
       if (callback) { callback(data); }
@@ -187,10 +218,11 @@ var playSong, stopSong, nextSong, toggleRepeat, queueSong, queueClear;
     for (var t in tracks) {
       var track = tracks[t];
       $('#searchbox-results ul').append(
-        '<li artist="' + track.artist_id + '" concert="' + track.item_id
-          + '" song="' + track.file_id +'" title="' + track.name + '">'
+        '<li artist="' + track.artist.name + '" concert="' + track.item_id
+          + '" song="' + track.file_id +'" title="' + track.name
+          + '" sid="' + track.id + '" aid="' + track.artist.tag + '">'
           + '<h2 class="result-track">' + track.name + '</h2>'
-          + '<h3 class="result-artist">' + track.artist + '</h3>'
+          + '<h3 class="result-artist">' + track.artist.name + '</h3>'
           + '</li>'
       );
     }
@@ -198,16 +230,19 @@ var playSong, stopSong, nextSong, toggleRepeat, queueSong, queueClear;
   }
 
   var populateResultsTable = function(item, callback) {
+    var coverArt = item.metadata && item.metadata.coverArt ?
+      item.metadata.coverArt : defaultCoverArt;
     $("#resultsbox table tbody").empty();
     $("#resultsbox header h1").text(item.artist);
     $("#resultsbox header h2").text(item.name);
-    $("#resultsbox .coverart img").attr('src', item.metadata.coverArt);
+    $("#resultsbox .coverart img").attr('src', coverArt);
     
     for (var t in item.tracks) {
       var track = item.tracks[t];
       $('#resultsbox table tbody').append(
-        '<tr artist="' + track.artist + '" concert="' + track.item_id
-          + '" song="' + track.file_id +'" title="' + track.name + '">'
+        '<tr artist="' + track.artist.name + '" concert="' + track.item_id
+          + '" song="' + track.file_id +'" title="' + track.name
+          + '" sid="' + track.id + '" aid="' + track.artist.tag + '">'
           +'<td class="playable">' + track.number + '</td>'
           +'<td class="playable">' + track.name + '</td>'
           +'<td class="playable">' + toMinutes(track.length) + '</td>'
@@ -224,11 +259,10 @@ var playSong, stopSong, nextSong, toggleRepeat, queueSong, queueClear;
   // On search typing
   $('#searchbox-header form').submit(function(event) { event.preventDefault(); });
   $('#searchbox-header form').keyup(debounce(function(event) {
-    //if (req) { req.abort(); } 
     search($('#search-query').val(), function(results) {
       populateSearchMatches(results);
     });
-  }, 200, true));
+  }, 200, false));
 
   $('#blur-search').click(function() {
     if($('#searchbox').hasClass('open')) {
@@ -283,20 +317,14 @@ var playSong, stopSong, nextSong, toggleRepeat, queueSong, queueClear;
   /* If track '+' clicked in resultsbox, add to queue */
   $('#resultsbox table tbody').on('click', 'tr td.track-queue', function() {
     var $this = $(this).closest('tr');
-    var track = {
-      artist: $this.attr('artist'),
-      concert: $this.attr('concert'),
-      song: $this.attr('song'),
-      title: $this.attr('title')
-    }
-    queueSong(track);
+    queueSong(extractTrack($this));
   });
 
   /* If search result is clicked, play song and/or load concert tracks in resultsbox */
   $('#searchbox-results ul').on('click', 'li', function() {
     var $this = $(this);
     setTimeout(function () {
-      var artist = $this.attr('artist');
+      var artist = $this.attr('aid');
       var concert = $this.attr('concert');
       getConcert(artist, concert, function(results) {
         toggleSearchbox();
@@ -316,4 +344,30 @@ var playSong, stopSong, nextSong, toggleRepeat, queueSong, queueClear;
       });
     }, 300);
   });
+
+  $('#results-toggler').click(function() {
+    toggleResultsbox();
+  })
+
+  /* Parse GET parameters */
+  var options = getJsonFromUrl();
+  if (options.queue) {
+    options.queue = options.queue.split(",");
+    var idx = 0;
+    for (var sid in options.queue) {      
+      getTrack(options.queue[sid], function(track) {
+        var song = {
+          artist: track.artist.name,
+          aid: track.artist.tag,
+          concert: track.item_id,
+          song: track.file_id,
+          title: track.name,
+          sid: track.id
+        };
+        idx ? queueSong(song) : playSong(getQueueSong(queueSong(song)));
+        idx += 1;
+      });      
+    }
+  }
+
 }());

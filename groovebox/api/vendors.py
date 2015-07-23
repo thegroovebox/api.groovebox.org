@@ -15,34 +15,201 @@
 import json
 import requests
 from math import ceil
-from whoosh.index import create_in
-from whoosh.fields import Schema, ID, TEXT
+from difflib import SequenceMatcher
 from sqlalchemy.exc import IntegrityError
 from utils import subdict
 
-
-BASE_URL = "https://archive.org"
-API_URL = "%s/advancedsearch.php" % BASE_URL
-METADATA_URL = "%s/metadata" % BASE_URL
-COVERART_API_URL = "https://itunes.apple.com/search"
 REQUIRED_KEYS = ['title', 'length', 'name', 'track']
 FILETYPE_PRIORITY = ['mp3', 'shn', 'ogg', 'flac']
-                                                
+
+class Vendor(object):
+    BASE_URL = ""
+
+class Archive(Vendor):
+    BASE_URL = 'https://archive.org'         
+    METADATA_URL = "%s/metadata" % BASE_URL
+
+    @classmethod
+    def filenames(cls,item):
+        url = "%s/%s" % (cls.METADATA_URL, concert)
+        try:
+            r = requests.get(url).json()
+        except:
+            r = {}
+        return r.pop('files', [])
+
+
+class Musix(Vendor):
+    BASE_URL = 'https://www.musixmatch.com'
+    API_URL = '%s/ws/1.1' %  BASE_URL
+    API_PARAMS = {        
+        'app_id': 'community-app-v1.0',
+        'format': 'json'
+        }
+
+    @classmethod
+    def artist(cls, artist, albums=True, tracks=False, image=False, limit=5):
+        """Use this to get an artist and their albums"""
+        options = {
+            "limit": limit
+            }
+        if image:
+            options['artist_image'] = 1
+
+        try:
+            artists = cls.search(artist, entity='artist', **options)
+            match = max(artists, key=lambda candidate: SequenceMatcher(
+                    None, artist, candidate['artist']['artist_name']).ratio())            
+        except:
+            return {}
+
+        if albums:
+            artist_id = match.get('artist', {}).get('artist_id')
+            match['albums'] = [] if not artist_id else \
+                cls.albums(artist_id, tracks=tracks)
+        return match
+
+
+    @classmethod
+    def albums(cls, artist_id, tracks=False, page=1):
+        """artist-id is the Artist's Musix id"""
+        url = '%s/artist.albums.get' % cls.API_URL
+        params = cls.API_PARAMS
+        params.update({
+                'page_size': 100,
+                'page': page,
+                'g_album_name': 1,
+                'artist_id': artist_id
+                })
+        if tracks:
+            pass # XXX
+
+        return requests.get(url, params=params).json() \
+            .get('message', {}).get('body', {}).get('album_list', [])
+
+    @classmethod
+    def album_tracks(cls, album_id, page=1):
+        """Return tracks of an album by musix id"""
+        url = '%s/artist.albums.get' % cls.API_URL
+        params = cls.API_PARAMS
+        params.update({
+            "part": "track_artist",
+            "track_fields_set": "community_track_list",
+            "artist_fields_set": "community_track_list_artist",
+            "page_size": 100,
+            "page": page
+            })
+        return requests.get(url, params=params).json() \
+            .get('body', {}).get('track_list', [])
+
+    @classmethod
+    def tracks(cls, track, artist=False):
+        """
+        page=1&page_size=100&f_stop_words=1&g_album_name_type=1&part=track_artist&track_fields_set=community_track_list&artist_fields_set=community_track_list_artist&album_id=10702867
+        """
+        url = "%s/album.tracks.get" % cls.API_URL 
+        params = cls.API_PARAMS
+        params.update({                
+                })
+        if artist:
+            options['track_artist'] = 1
+
+        # "track_fields_set": "community_track_list",
+        # "artist_fields_set": "community_track_list_artist",
+        # "q_track_artist": artist,
+
+        results = [] # if multiple pages
+        # may have to search multiple pages 
+        tracks = cls.search(track, **options)
+
+    @classmethod
+    def search(cls, q, entity='track', limit=71, page=1, **options):
+        """Search for an artist or track's metadata via musixmatch API
+
+        params:
+            limit - max 71 for tracks and artists (trial and error)
+            options - kwargs of params to include with GET request:
+                part=["track_artist"|"artist_image"]
+                    track_artist - returns artist w/ each track
+                    artist_image - includes artist images w/ each artist
+
+        usage:
+            >>> artist = Musix.search(entity="artist", part="artist_image")
+        """
+        url = '%s/%s.search' % (cls.API_URL, entity)
+        params = cls.API_PARAMS
+        params.update({
+                "q": q,
+                "page": page,
+                "page_size": limit, # max page size (trial and error)
+                "f_stop_words": 1,
+                "g_album_name_type": 1,
+                })
+        params.update(options)
+        r = requests.get(url, params=params).json()
+        return r.get('message', {}).get('body', {}).get('%s_list' % entity, [])
+
+
+class Itunes(Vendor):
+    BASE_URL = 'https://itunes.apple.com'
+    SEARCH_URL = '%s/search' % BASE_URL
+
+    @classmethod
+    def artist(cls, artist, limit=1):
+        return cls.search(artist=artist, limit=limit)
+
+
+    @classmethod
+    def song(cls, song, artist="", limit=1):
+        return cls.search(artist=artist, song=song, limit=limit)
+
+
+    @classmethod
+    def search(cls, artist="", song="", limit=1):
+        """Retrieves metadata + coverart about song, album, and artist
+        from itunes.
+
+        http://www.apple.com/itunes/affiliates/resources/documentation
+            /itunes-store-web-service-search-api.html
+        """
+        results = requests.get(cls.SEARCH_URL, params={
+                "media": "music",
+                "artistName": artist,
+                "term": song or artist, #if no song available
+                "country": "us",
+                "limit": limit
+                }).json().get('results', [])
+        for i, r in enumerate(results):
+            results[i]['coverArt'] = results[i]["artworkUrl100"].replace('.100x100-75', '')
+        return results
+
+class Musicbrainz(Vendor):
+    BASE_URL = 'https://musicbrainz.org'
+
 
 class Crawler(object):
 
+    """XXX Crawler should be refactored and considered as a candidate
+    for deprecation (in favor of its useful components being moved to
+    Archive Vendor)
+    """
+
     @staticmethod
-    def artists(limit=10000):
+    def artists(limit=15000):
         """Retrieves a list of artists from the Archive.org Live Music
-        collection
+        collection.
+
+        params:
+            limit - default 15,000 as no music collection I know of
+                    has more than 15,000 items.
         """
         params = {
-            "q": "collection(etree) AND mediatype:(collection)",
+            "q": "collection:(etree) AND mediatype:(collection)",
             "fl[]": "identifier title",
             "rows": limit,
             "output": "json"
             }
-        r = requests.get(API_URL, params=params).json()['response']['docs']
+        r = requests.get(Archive.API_URL, params=params).json()['response']['docs']
         return list(filter(lambda r: r['identifier'] != 'etree', r))
 
 
@@ -59,14 +226,14 @@ class Crawler(object):
             "rows": limit,
             "output": "json"
             }
-        rs = requests.get(API_URL, params=params).json()['response']['docs']
+        rs = requests.get(Archive.API_URL, params=params).json()['response']['docs']
         return rs
 
 
     @classmethod
     def concert(cls, c):
         """Retrieves a concert's metadata + tracks from Archive.org API"""
-        url = "%s/%s" % (METADATA_URL, c)
+        url = "%s/%s" % (Archive.METADATA_URL, c)
         r = requests.get(url).json()
         fs = r.pop('files')
         r = r.pop('metadata', {})
@@ -84,34 +251,25 @@ class Crawler(object):
     @classmethod
     def tracks(cls, concert):
         """Returns ordered list of tracks for this concert"""
-        url = "%s/%s" % (METADATA_URL, concert)
-        try:
-            r = requests.get(url).json()
-            fs = r.pop('files')
-        except:
-            fs = []
-        return cls._tracks(fs)
+        return cls._tracks(Archive.filenames(concert))
 
 
     @staticmethod
-    def metadata(artist, song=""):
-        """Retrieves coverart + details about song, album, and artist
-        from itunes.
+    def metadata(artist):
+        data = {
+            "primaryGenreName": "",
+            "coverArt": ""
+            }
+        metadata = Itunes.artist(artist)
+        if not metadata:
+            return data
 
-        http://www.apple.com/itunes/affiliates/resources/documentation
-            /itunes-store-web-service-search-api.html
-        """        
-        keep_keys = ["primaryGenreName", "coverArt"] + \
-            (["collectionName", "trackName", "releaseDate"] if song else [])
-        r = requests.get(COVERART_API_URL, params={
-                "media": "music",
-                "artistName": artist,
-                "term": song or artist, #if no song available
-                "country": "us",
-                "limit": 1
-                }).json()['results'][0]
-        r["coverArt"] = r["artworkUrl100"].replace('.100x100-75', '')
-        return dict([(key, r[key]) for key in keep_keys])
+        song = metadata[0]
+        keep_keys = data.keys()      
+        for key in song:
+            if key in keep_keys:
+                data[key] = song[key]
+        return data
 
 
     @staticmethod
@@ -153,3 +311,5 @@ class Crawler(object):
         except ValueError as e:
             print(e)
         return ts
+
+

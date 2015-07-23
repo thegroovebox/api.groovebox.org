@@ -11,7 +11,9 @@
     :license: see LICENSE for more details.
 """
 
-from api import DBSession
+
+from api import db
+from sqlalchemy.dialects import postgresql 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import ClauseElement
 
@@ -28,7 +30,7 @@ class GrooveboxException(Exception):
 
 class BaseMixin(object):
 
-    query = DBSession.query_property()
+    query = db.query_property()
 
     TBL = ''
     PKEY = 'id'
@@ -66,6 +68,13 @@ class BaseMixin(object):
     def dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
+    def remove(self, commit=True):
+        """Potentially check if DBsession is "clean" and then commit
+        only if it is, or if commit flag specified
+        """
+        db.delete(self)
+        if commit:
+            db.commit()
 
     def create_hook(self):
         """Custom create logic to be overridden by inheriting classes"""
@@ -77,6 +86,9 @@ class BaseMixin(object):
         classes to handling custom validation"""
         self.create_hook()
         return self._save()
+
+    def to_sql(q):
+        return q.statement.compile(dialect=postgresql.dialect())
 
     def save_hook(self):
         """Custom create logic to be overridden by inheriting classes"""
@@ -90,7 +102,7 @@ class BaseMixin(object):
         pid = getattr(self, self.PKEY, '')
         if not pid:
             raise GrooveboxException(
-                "Save operation requires primary key to be unset, "\
+                "Save operation requires primary key to be unset, " \
                     "i.e. record must alreay exist")
         self.save_hook()
         self._save(update=True)
@@ -104,17 +116,17 @@ class BaseMixin(object):
                     "Unable to save/update to %s entity with %s: %s. " \
                         "Entry must first be created." \
                         % (self.TBL, self.PKEY, pid))
-        DBSession.add(self)
+        db.add(self)
         try:
-            DBSession.commit()
+            db.commit()
             return getattr(self, self.PKEY)
         except Exception as e:
-            DBSession.rollback()
+            db.rollback()
             raise e
 
     @classmethod
     def get_several(cls, ids):
-        return DBSession.query(cls).filter(cls.id.in_(ids)).all()
+        return db.query(cls).filter(cls.id.in_(ids)).all()
 
     @classmethod
     def exists(cls, *args, **kwargs):
@@ -126,14 +138,14 @@ class BaseMixin(object):
         if not terms:
             terms = list(args)+[getattr(cls, k)==v for k,v in kwargs.items()]
 
-        res = DBSession.query(getattr(cls, cls.PKEY)).filter(*terms).limit(1).first()
+        res = db.query(getattr(cls, cls.PKEY)).filter(*terms).limit(1).first()
         if res:
             return res.id
         return False
 
     @classmethod
-    def search(cls, query, field, limit=10, offset=0):
+    def search(cls, query, field, limit=10, page=0):
         return cls.query.filter(getattr(cls, field).ilike("%" + query + "%"))\
-            .offset(offset).limit(limit).all()
+            .offset(page * limit).limit(limit).all()
 
 Base = declarative_base(cls=BaseMixin)

@@ -17,6 +17,8 @@ import views
 from configs import options
 
 urls = ('/api', apis,
+        '/q/<code>/<name>', views.Playlist,
+        '/q/<code>', views.Playlist,
         '/favicon.ico', views.Favicon,
         '/<path:uri>', views.Base,
         '/', views.Base
