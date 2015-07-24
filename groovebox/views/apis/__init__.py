@@ -13,7 +13,7 @@
 from flask import render_template, request
 from flask.views import MethodView
 from views import rest_api, paginate
-import api.music as api
+from api import music as api
 
 
 class Artists(MethodView):

@@ -13,13 +13,13 @@
 
 from random import randint
 from datetime import datetime
-from api import db, engine, core
-from api.vendors import Crawler, Musix
 from sqlalchemy import Column, Unicode, BigInteger, Integer, \
     DateTime, ForeignKey, ForeignKey, Table, exists, func
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
 from sqlalchemy.orm.exc import ObjectDeletedError
 from sqlalchemy.orm import deferred, relationship
+from api import db, engine, core
+from api.vendors import Crawler, Musix
 from utils import time2sec
 
 

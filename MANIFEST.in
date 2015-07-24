@@ -1,1 +1,4 @@
+include CHANGES
+include LICENSE
 include README.rst
+

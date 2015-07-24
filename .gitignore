@@ -6,3 +6,4 @@
 *.ini
 *.sock
 __pycache__
+groovebox.egg-info
