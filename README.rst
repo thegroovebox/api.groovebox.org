@@ -161,9 +161,11 @@ Data Sources
 ------------
 
 Songs are fetched from:
+
 - Internet Archive (Archive.org)
 
 Metadata is collected from:
+
 - Archive.org
 - Musicbrainz
 - Musixmatch
