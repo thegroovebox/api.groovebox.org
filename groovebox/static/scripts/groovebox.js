@@ -28,7 +28,8 @@ var debounce = function (func, threshold, execAsap) {
   };
 }
 
-var playSong, stopSong, nextSong, toggleRepeat, queueSong, queueExport, queueClear;
+var playSong, stopSong, nextSong, songStopped, toggleRepeat;
+var queueSong, queueExport, queueClear;
 var getGenreArtists, getArtist, getAlbum, getConcert, getSong, getTrack;
 
 (function () {
@@ -40,7 +41,7 @@ var getGenreArtists, getArtist, getAlbum, getConcert, getSong, getTrack;
       artist: $this.attr('artist'),
       aid: $this.attr('aid'),
       concert: $this.attr('concert'),
-      song: $this.attr('song'),
+      song: $this.attr('song'),      
       title: $this.attr('title'),
       sid: $this.attr('sid')
     }
@@ -66,6 +67,10 @@ var getGenreArtists, getArtist, getAlbum, getConcert, getSong, getTrack;
   var getQueueSong = function(index) {
     var $this = $('#playbox #history ul.queue li').eq(index);
     return extractTrack($this);
+  }
+
+  songStopped = function() {
+    return $('#audio-player')[0].paused;
   }
 
   nextSong = function() {
@@ -115,7 +120,7 @@ var getGenreArtists, getArtist, getAlbum, getConcert, getSong, getTrack;
     var src = $('#resultsbox .coverart img').attr('src');
     var url = baseurl + track.concert + "/" + track.song;
     $('#nowplaying .album-cover img').attr("src", src);
-    $('#nowplaying .song-title').text(track.name);
+    $('#nowplaying .song-title').text(track.title);
     $('#nowplaying .song-artist').text(track.artist);
     $('#audio-player source').attr("src", url);
     $('#audio-player')[0].pause();
@@ -254,6 +259,7 @@ var getGenreArtists, getArtist, getAlbum, getConcert, getSong, getTrack;
     if (!$('#resultsbox').hasClass('open')) {
       toggleResultsbox();
     }
+    if (callback) { callback(); }
   }
 
   // On search typing
@@ -280,23 +286,39 @@ var getGenreArtists, getArtist, getAlbum, getConcert, getSong, getTrack;
     toggleSearchbox();
   });
 
+  /* Queue and immediately play track from track results */
   $('#resultsbox').on('click', 'tr td.playable', function() {
     var $this = $(this).closest('tr');
-    var track = extractTrack($this);          
+    var track = extractTrack($this);
     queue.select(queueSong(track));
     playSong(track);
   });
 
+  /* Queue + start playing entire concert */
+  $('#resultsbox table thead').on('click', 'th.play-all', function() {    
+    var pos = queue.length();
+    $('#resultsbox table tbody tr').each(function() {
+      queueSong(extractTrack($(this)));
+    }).promise().done(function() {
+      if(songStopped()) {
+        var index = pos ? pos + 1 : pos;
+        queue.select(index);
+        playSong(getQueueSong(index));
+      }
+    });   
+  });
+
   /* Play song from queue */
   $('#playbox #history ul.queue')  
-    .on('click', 'li span.track-play', function() {
+    .on('click', 'li', function() {
       var $this = $(this).closest('li');
       queue.select($this.index('#playbox #history ul.queue li'));
       playSong(extractTrack($this));
     });
 
   /* dequeue song*/
-  $('#playbox #history ul.queue').on('click', 'li span.track-remove', function() {
+  $('#playbox #history ul.queue').on('click', 'li span.track-remove', function(event) {
+    event.stopPropagation();
     var $this = $(this).closest('li');
     var index = $this.index('#playbox #history ul.queue li');
     $this.remove()
@@ -324,11 +346,17 @@ var getGenreArtists, getArtist, getAlbum, getConcert, getSong, getTrack;
   $('#searchbox-results ul').on('click', 'li', function() {
     var $this = $(this);
     setTimeout(function () {
+      var track = extractTrack($this);
       var artist = $this.attr('aid');
       var concert = $this.attr('concert');
       getConcert(artist, concert, function(results) {
         toggleSearchbox();
-        populateResultsTable(results);
+        populateResultsTable(results, function() {
+          var sel = '#resultsbox table tbody tr[sid=' + track.sid + ']';
+          var searchedSong = $(sel).position();
+          $('#resultsbox').animate({scrollTop: searchedSong.top}, 600);
+          $(sel).addClass("selected");
+        });
       });
     }, 300);
   });
@@ -355,6 +383,7 @@ var getGenreArtists, getArtist, getAlbum, getConcert, getSong, getTrack;
     options.queue = options.queue.split(",");
     var idx = 0;
     for (var sid in options.queue) {      
+      // XXX fix song miss-ordering caused by .get
       getTrack(options.queue[sid], function(track) {
         var song = {
           artist: track.artist.name,

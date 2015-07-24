@@ -297,6 +297,10 @@ a:hover {
     font-weight: normal;
 }
 
+#resultsbox table th.play-all {
+    cursor: pointer;    
+}
+
 #resultsbox table td {
     border-bottom: 1px solid #1E1F37;
     text-align: left;
@@ -327,6 +331,10 @@ a:hover {
 #resultsbox table tbody tr:hover {
     background-color: #1E1F37;
     cursor: pointer;
+}
+
+#resultsbox table tbody tr.selected {
+    background-color: #0A0A18;
 }
 
 .coverart {
@@ -366,7 +374,7 @@ a:hover {
     margin-left: 4px;
     position: relative;
     top: 15px;
-    font-size: .9em;
+    font-size: .8em;
 }
 
 #playbox #nowplaying {
