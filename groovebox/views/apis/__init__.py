@@ -1,16 +1,16 @@
 #!/usr/bin/env pythonNone
-#-*-coding: utf-8 -*-
+# -*-coding: utf-8 -*-
 
 """
     __init__.py
     ~~~~~~~~~~~
-    
+
 
     :copyright: (c) 2015 by Anonymous
     :license: BSD, see LICENSE for more details.
 """
 
-from flask import render_template, request
+from flask import request
 from flask.views import MethodView
 from views import rest_api, paginate
 from api import music as api
@@ -107,7 +107,7 @@ class Concert(MethodView):
     def get(self, concert):
         c = api.Concert.get(tag=concert)
         return c.dict(metadata=True)
-        
+
 
 class Genres(MethodView):
 
@@ -176,7 +176,7 @@ class Search(MethodView):
         }
 
 urls = (
-    '/artists/<artist>/albums/<int:album>', ArtistsAlbum, #songs
+    '/artists/<artist>/albums/<int:album>', ArtistsAlbum,  # songs
     '/artists/<artist>/albums', ArtistsAlbums,
     '/artists/<artist>/concerts/<concert>', ArtistsConcert,
     '/artists/<artist>/concerts', ArtistsConcerts,

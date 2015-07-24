@@ -1,5 +1,5 @@
-#!/usr/bin/env pythonNone
-#-*-coding: utf-8 -*-
+#!/usr/bin/env python
+# -*-coding: utf-8 -*-
 
 """
     __init__.py
@@ -11,15 +11,19 @@
 """
 
 import os
-import sys
 import types
 import configparser
 import logging
 
+__title__ = 'groovebox'
+__version__ = '0.0.1'
+__author__ = [
+    'Mek <michael.karpeles@gmail.com>'
+    ]
+
 path = os.path.dirname(os.path.realpath(__file__))
 approot = os.path.abspath(os.path.join(path, os.pardir))
 
-#logging.basicConfig(level=logging.ERROR, filename='%s/error.log' % approot)
 
 def errorlog(f):
     """Prints and logs errors without breaking program execution"""
@@ -56,8 +60,8 @@ if CRT and KEY:
 DB_URI = '%(dbn)s://%(user)s:%(pw)s@%(host)s:%(port)s/%(db)s' % {
     'dbn': config.getdef('db', 'dbn', 'postgres'),
     'port': config.getdef('db', 'port', '5433'),
-    'host': config.getdef('db', 'host', ''),
-    'user': config.getdef('db', 'user', ''),
-    'pw': config.getdef('db', 'pw', ''),
-    'db': config.getdef('db', 'db', '')
+    'host': config.getdef('db', 'host', 'localhost'),
+    'user': config.getdef('db', 'user', 'postgres'),
+    'db': config.getdef('db', 'db', 'groovebox'),
+    'pw': config.getdef('db', 'pw', '')
     }

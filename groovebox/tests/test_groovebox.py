@@ -11,23 +11,19 @@
     :license: see LICENSE for more details.
 """
 
-import os
 import unittest
-import tempfile
-import app
-from api import music, vendors
+import app as groovebox
+# from api import music, vendors
+
 
 class TestGroovebox(unittest.TestCase):
 
     def setUp(self):
-        self.db_fd, app.config['DATABASE'] = tempfile.mkstemp()
-        app.config['TESTING'] = True
-        self.app = app.test_client()
-        init_db()
+        self.app = groovebox.app.test_client()
 
     def tearDown(self):
-        os.close(self.db_fd)
-        os.unlink(app.config['DATABASE'])
+        pass
+
 
 if __name__ == '__main__':
     unittest.main()

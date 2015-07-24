@@ -12,26 +12,25 @@
     :license: see LICENSE for more details.
 """
 
-import json
 import requests
-from math import ceil
 from difflib import SequenceMatcher
-from sqlalchemy.exc import IntegrityError
 from utils import subdict
 
 REQUIRED_KEYS = ['title', 'length', 'name', 'track']
 FILETYPE_PRIORITY = ['mp3', 'shn', 'ogg', 'flac']
 
+
 class Vendor(object):
     BASE_URL = ""
 
+
 class Archive(Vendor):
-    BASE_URL = 'https://archive.org'         
-    METADATA_URL = "%s/metadata" % BASE_URL
+    BASE_URL = 'https://archive.org'
+    METADATA_URL = '%s/metadata' % BASE_URL
 
     @classmethod
-    def filenames(cls,item):
-        url = "%s/%s" % (cls.METADATA_URL, concert)
+    def filenames(cls, item):
+        url = "%s/%s" % (cls.METADATA_URL, item)
         try:
             r = requests.get(url).json()
         except:
@@ -41,8 +40,8 @@ class Archive(Vendor):
 
 class Musix(Vendor):
     BASE_URL = 'https://www.musixmatch.com'
-    API_URL = '%s/ws/1.1' %  BASE_URL
-    API_PARAMS = {        
+    API_URL = '%s/ws/1.1' % BASE_URL
+    API_PARAMS = {
         'app_id': 'community-app-v1.0',
         'format': 'json'
         }
@@ -59,7 +58,7 @@ class Musix(Vendor):
         try:
             artists = cls.search(artist, entity='artist', **options)
             match = max(artists, key=lambda candidate: SequenceMatcher(
-                    None, artist, candidate['artist']['artist_name']).ratio())            
+                None, artist, candidate['artist']['artist_name']).ratio())
         except:
             return {}
 
@@ -69,27 +68,29 @@ class Musix(Vendor):
                 cls.albums(artist_id, tracks=tracks)
         return match
 
-
     @classmethod
     def albums(cls, artist_id, tracks=False, page=1):
         """artist-id is the Artist's Musix id"""
         url = '%s/artist.albums.get' % cls.API_URL
         params = cls.API_PARAMS
         params.update({
-                'page_size': 100,
-                'page': page,
-                'g_album_name': 1,
-                'artist_id': artist_id
-                })
+            'page_size': 100,
+            'page': page,
+            'g_album_name': 1,
+            'artist_id': artist_id
+            })
         if tracks:
-            pass # XXX
+            pass
 
         return requests.get(url, params=params).json() \
             .get('message', {}).get('body', {}).get('album_list', [])
 
     @classmethod
     def album_tracks(cls, album_id, page=1):
-        """Return tracks of an album by musix id"""
+        """Return tracks of an album by musix album id. This method
+        assumes no album will have more than 100 songs, or if it does,
+        this is rare enough that it can be manually QA'd
+        """
         url = '%s/artist.albums.get' % cls.API_URL
         params = cls.API_PARAMS
         params.update({
@@ -103,13 +104,18 @@ class Musix(Vendor):
             .get('body', {}).get('track_list', [])
 
     @classmethod
-    def tracks(cls, track, artist=False):
+    def tracks(cls, track, artist=False, limit=100):
         """
-        page=1&page_size=100&f_stop_words=1&g_album_name_type=1&part=track_artist&track_fields_set=community_track_list&artist_fields_set=community_track_list_artist&album_id=10702867
-        """
-        url = "%s/album.tracks.get" % cls.API_URL 
+        url = "%s/album.tracks.get" % cls.API_URL
         params = cls.API_PARAMS
-        params.update({                
+        params.update({
+                "page_size": limit,
+                "f_stop_words": 1,
+                "g_album_name_type": 1,
+                "part": "track_artist",
+                "track_fields_set": "community_track_list",
+                "artist_fields_set": "community_track_list_artist"
+                "album_id": artist
                 })
         if artist:
             options['track_artist'] = 1
@@ -119,8 +125,11 @@ class Musix(Vendor):
         # "q_track_artist": artist,
 
         results = [] # if multiple pages
-        # may have to search multiple pages 
+        # may have to search multiple pages
         tracks = cls.search(track, **options)
+        return tracks
+        """
+        raise NotImplementedError
 
     @classmethod
     def search(cls, q, entity='track', limit=71, page=1, **options):
@@ -139,12 +148,12 @@ class Musix(Vendor):
         url = '%s/%s.search' % (cls.API_URL, entity)
         params = cls.API_PARAMS
         params.update({
-                "q": q,
-                "page": page,
-                "page_size": limit, # max page size (trial and error)
-                "f_stop_words": 1,
-                "g_album_name_type": 1,
-                })
+            "q": q,
+            "page": page,
+            "page_size": limit,  # max page size (trial and error)
+            "f_stop_words": 1,
+            "g_album_name_type": 1,
+            })
         params.update(options)
         r = requests.get(url, params=params).json()
         return r.get('message', {}).get('body', {}).get('%s_list' % entity, [])
@@ -158,11 +167,9 @@ class Itunes(Vendor):
     def artist(cls, artist, limit=1):
         return cls.search(artist=artist, limit=limit)
 
-
     @classmethod
     def song(cls, song, artist="", limit=1):
         return cls.search(artist=artist, song=song, limit=limit)
-
 
     @classmethod
     def search(cls, artist="", song="", limit=1):
@@ -172,16 +179,20 @@ class Itunes(Vendor):
         http://www.apple.com/itunes/affiliates/resources/documentation
             /itunes-store-web-service-search-api.html
         """
-        results = requests.get(cls.SEARCH_URL, params={
-                "media": "music",
-                "artistName": artist,
-                "term": song or artist, #if no song available
-                "country": "us",
-                "limit": limit
-                }).json().get('results', [])
+        params = {
+            "media": "music",
+            "artistName": artist,
+            "term": song or artist,  # if no song available
+            "country": "us",
+            "limit": limit
+            }
+        r = requests.get(cls.SEARCH_URL, params=params).json()
+        results = r.get('results', [])
         for i, r in enumerate(results):
-            results[i]['coverArt'] = results[i]["artworkUrl100"].replace('.100x100-75', '')
+            results[i]['coverArt'] = results[i]["artworkUrl100"]\
+                .replace('.100x100-75', '')
         return results
+
 
 class Musicbrainz(Vendor):
     BASE_URL = 'https://musicbrainz.org'
@@ -209,16 +220,18 @@ class Crawler(object):
             "rows": limit,
             "output": "json"
             }
-        r = requests.get(Archive.API_URL, params=params).json()['response']['docs']
-        return list(filter(lambda r: r['identifier'] != 'etree', r))
-
+        r = requests.get(Archive.API_URL, params=params).json()
+        rs = r['response']['docs']
+        return list(filter(lambda r: r['identifier'] != 'etree', rs))
 
     @staticmethod
     def concerts(artist, limit=15000):
-        """Retrieves all the concerts (items) of a band from Archive.org API
-        
+        """Retrieves all the concerts (items) of a band from
+        Archive.org API.
+
         params:
-            artist - the collection id for this artist (e.g. GratefulDead)
+            artist - the collection id for this artist
+                    (e.g. GratefulDead)
         """
         params = {
             "q": "collection:(%s)" % artist,
@@ -226,13 +239,12 @@ class Crawler(object):
             "rows": limit,
             "output": "json"
             }
-        rs = requests.get(Archive.API_URL, params=params).json()['response']['docs']
-        return rs
-
+        r = requests.get(Archive.API_URL, params=params).json()
+        return r['response']['docs']
 
     @classmethod
     def concert(cls, c):
-        """Retrieves a concert's metadata + tracks from Archive.org API"""
+        """Retrieves concert metadata + tracks from Archive.org"""
         url = "%s/%s" % (Archive.METADATA_URL, c)
         r = requests.get(url).json()
         fs = r.pop('files')
@@ -247,12 +259,10 @@ class Crawler(object):
             return e
         return r
 
-
     @classmethod
     def tracks(cls, concert):
         """Returns ordered list of tracks for this concert"""
         return cls._tracks(Archive.filenames(concert))
-
 
     @staticmethod
     def metadata(artist):
@@ -265,12 +275,11 @@ class Crawler(object):
             return data
 
         song = metadata[0]
-        keep_keys = data.keys()      
+        keep_keys = data.keys()
         for key in song:
             if key in keep_keys:
                 data[key] = song[key]
         return data
-
 
     @staticmethod
     def _tracks(files):
@@ -280,29 +289,30 @@ class Crawler(object):
         def sort_tracks(tracks):
             for i in range(len(tracks)):
                 try:
-                    tracks[i]['track'] = int(tracks[i].get('track', "1").split("/")[0])
+                    tracks[i]['track'] = int(tracks[i].get('track', "1")
+                                             .split("/")[0])
                 except:
                     tracks[i]['track'] = 1
-
             return sorted(tracks, key=lambda t: t['track'])
 
         def get_filetype(files):
-            available = set(f.get('name', '').lower().rsplit('.', 1)[-1] for f in files)
-            return next(ft if ft in available else False for ft in FILETYPE_PRIORITY)
+            available = set(f.get('name', '').lower()
+                            .rsplit('.', 1)[-1] for f in files)
+            return next(ft if ft in available else
+                        False for ft in FILETYPE_PRIORITY)
 
         ts = []
         filetype = get_filetype(files)
 
-        if not filetype:        
-            return {} # better error handling required
+        if not filetype:
+            return {}  # better error handling required
 
         for f in files:
             try:
                 track = subdict(f, REQUIRED_KEYS)
             except KeyError as e:
-                continue # Skip if track doesn't have required keys
+                continue  # Skip if track doesn't have required keys
 
-            title = track.get('title')
             if track['name'].endswith(filetype):
                 ts.append(track)
 
@@ -311,5 +321,3 @@ class Crawler(object):
         except ValueError as e:
             print(e)
         return ts
-
-

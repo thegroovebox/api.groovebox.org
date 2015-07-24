@@ -37,14 +37,14 @@ def find_version(*file_paths):
 
 setup(
     name='groovebox',
-    version=find_version("groovebox", "__init__.py"),
+    version=find_version("groovebox", "configs/__init__.py"),
     description='A spotify-like Archive.org Music Player',
     long_description=read('README.rst'),
     classifiers=[
         ],
     author='mek',
-    author_email='',
-    url='',
+    author_email='michael.karpeles@gmail.com',
+    url='groovebox.org',
     packages=[
         'groovebox'
         ],

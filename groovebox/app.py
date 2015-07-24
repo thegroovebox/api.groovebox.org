@@ -1,9 +1,9 @@
-#!/usr/bin/env pythonNone
-#-*-coding: utf-8 -*-
+#!/usr/bin/env python
+# -*-coding: utf-8 -*-
 
 """
     app.py
-    ~~~~~~    
+    ~~~~~~
 
     :copyright: (c) 2015 by Mek
     :license: see LICENSE for more details.

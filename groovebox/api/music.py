@@ -14,10 +14,10 @@
 from random import randint
 from datetime import datetime
 from sqlalchemy import Column, Unicode, BigInteger, Integer, \
-    DateTime, ForeignKey, ForeignKey, Table, exists, func
+    DateTime, ForeignKey, Table, exists, func
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
 from sqlalchemy.orm.exc import ObjectDeletedError
-from sqlalchemy.orm import deferred, relationship
+from sqlalchemy.orm import relationship
 from api import db, engine, core
 from api.vendors import Crawler, Musix
 from utils import time2sec
@@ -40,7 +40,7 @@ def coldstart(concerts=True, tracks=False, crawl=False):
         >>> from api.crawler import Worker;Worker.coldstart()
     """
     build_tables()
-    Artist.register(concerts=concerts, tracks=tracks) # populate db
+    Artist.register(concerts=concerts, tracks=tracks)  # populate db
 
 
 def build_tables():
@@ -67,20 +67,26 @@ def report():
 artist_to_genre = \
     Table('artists_genres', core.Base.metadata,
           Column('id', BigInteger, primary_key=True),
-          Column('artist_id', BigInteger, ForeignKey(
-                'artists.id', use_alter=True), nullable=False),
-          Column('genre_id', BigInteger, ForeignKey(
-                'genres.id', use_alter=True), nullable=False)
+          Column('artist_id', BigInteger,
+                 ForeignKey('artists.id', use_alter=True),
+                 nullable=False),
+          Column('genre_id', BigInteger,
+                 ForeignKey('genres.id', use_alter=True),
+                 nullable=False)
           )
+
 
 song_to_album = \
     Table('song_albums', core.Base.metadata,
           Column('id', BigInteger, primary_key=True),
-          Column('song_id', BigInteger, ForeignKey(
-                'songs.id', use_alter=True), nullable=False),
-          Column('album_id', BigInteger, ForeignKey(
-                'albums.id', use_alter=True), nullable=False)
+          Column('song_id', BigInteger,
+                 ForeignKey('songs.id', use_alter=True),
+                 nullable=False),
+          Column('album_id', BigInteger,
+                 ForeignKey('albums.id', use_alter=True),
+                 nullable=False)
           )
+
 
 class Genre(core.Base):
     """Jazz, Classical, Funk, Jam, Reggae, Ambient, Blue"""
@@ -100,6 +106,7 @@ class Genre(core.Base):
             genre['artists'] = [a.dict() for a in self.artists]
         return genre
 
+
 class Artist(core.Base):
 
     __tablename__ = "artists"
@@ -108,12 +115,14 @@ class Artist(core.Base):
     id = Column(BigInteger, primary_key=True)
     tag = Column(Unicode, unique=True, nullable=False)
     name = Column(Unicode, nullable=False)
-    mbid = Column(Unicode, nullable=True, default=None, unique=True) # musicbrainz id
+    mbid = Column(Unicode, nullable=True, default=None,
+                  unique=True)  # musicbrainz id
     musixmatch = Column(Unicode, unique=True)
     avatar = Column(Unicode, default=u"")
     created = Column(DateTime(timezone=False), default=datetime.utcnow,
                      nullable=False)
-    genres = relationship('Genre', secondary=artist_to_genre, backref="artists")
+    genres = relationship('Genre', secondary=artist_to_genre,
+                          backref="artists")
     album_query = relationship('Album', lazy='dynamic')
     concerts_query = relationship('Concert', lazy='dynamic')
 
@@ -142,10 +151,8 @@ class Artist(core.Base):
                 cls(tag=tag, name=name).create()
             except:
                 pass
-
             if concerts:
                 cls.register_concerts(artist=a, tracks=tracks)
-
 
     def register_concerts(self, tracks=False):
         """Retrieves a json list of concerts from archive.org for a
@@ -159,21 +166,20 @@ class Artist(core.Base):
             >>> a = Artist.get(tag="ExplosionsintheSky")
             >>> a.register_concerts()
         """
-        concerts = Crawler.concerts(artist.tag)
+        concerts = Crawler.concerts(self.tag)
         for concert in concerts:
             name = concerts['title']
             tag = concerts['identifier']
             print(concert)
             try:
                 c = Concert(tag=tag, name=name)
-                artist.concerts.append(c)
-                artist.save()
+                self.concerts.append(c)
+                self.save()
             except:
                 pass
 
             if tracks:
                 c.register_tracks()
-
 
     def register_tracks(self, concert=None):
         """Assumes Artist and Artist's Concerts already exist in
@@ -183,27 +189,27 @@ class Artist(core.Base):
         concerts = [concert] if concert else self.concerts
         [c.register_tracks() for c in concerts]
 
-
     def register_albums(self, artist_id=None):
         if artist_id and not self.musixmatch:
             self.musixmatch = artist_id
         if self.musixmatch:
             return Musix.albums(self.musixmatch)
 
-
     def discography(self, tracks=False):
         """Creates a discography for this artist by:"
 
         1. Updating the Artist with metadata + genres
         2. Creating a db entry for each of the Artist's `Albums`
-        3. For each album, create (if !exists) or fetch Song and map to Album
-        4. For each Song, map Tracks whose titles match with >80% confidence
+        3. For each album, create (if !exists) or fetch Song and map
+           to Album
+        4. For each Song, map Tracks whose titles match with >80%
+           confidence
         """
         def fillin_artist(m):
             self.musixmatch = m['artist']['artist_id']
             self.mbid = m['artist']['artist_mbid'] or None
-            genres = [x['music_genre']['music_genre_name'] for x in \
-                          m['artist']['primary_genres']['music_genre_list']]
+            genres = [x['music_genre']['music_genre_name'] for x in
+                      m['artist']['primary_genres']['music_genre_list']]
             for genre in genres:
                 try:
                     g = Genre.get(name=genre)
@@ -225,21 +231,20 @@ class Artist(core.Base):
                               coverart=album['album_coverart_800x800'])
                     self.albums.append(a)
                 if tracks:
-                    pass # XXX
+                    pass  # XXX
 
         m = Musix.artist(self.name, albums=True)
         fillin_artist(m)
         create_albums(m['albums'])
         self.save()
 
-
     def get_deduped_tracks(self):
         """Placeholder for resolving Tracks against Songs"""
-        tracks = {}
-        tracknames = db.query(func.lower(Track.name)).filter(self.id == Track.artist_id).all()
+        # tracks = {}
+        tracknames = db.query(func.lower(Track.name)) \
+            .filter(self.id == Track.artist_id).all()
         for trackname in tracknames:
             pass
-
 
     def dict(self, tracks=False, albums=False):
         artist = super(Artist, self).dict()
@@ -312,17 +317,16 @@ class Concert(core.Base):
     tag = Column(Unicode, unique=True, nullable=False)
     name = Column(Unicode)
     created = Column(DateTime(timezone=False), default=datetime.utcnow,
-                   nullable=False)
+                     nullable=False)
 
     artist = relationship('Artist', backref='concerts')
 
     @classmethod
     def trackless_concerts(cls, limit=None, offset=None, query=False):
-        q = Concert.query.filter(
-            ~exists().where(Track.concert_id==Concert.id)
-             ).limit(limit).offset(offset)
+        q = Concert.query\
+            .filter(~exists().where(Track.concert_id == Concert.id))\
+            .limit(limit).offset(offset)
         return q if query else q.all()
-
 
     @classmethod
     def crawl(cls, limit=1000, offset=0, end=None):
@@ -333,7 +337,6 @@ class Concert(core.Base):
                 cls.register_tracks(concert.tag)
             except Exception as e:
                 print(e)
-
 
     def register_tracks(self):
         """Retrieves json metadata, including filenames, from
@@ -348,7 +351,8 @@ class Concert(core.Base):
         for track in Crawler.tracks(self.tag):
             print(track['name'])
             try:
-                self.tracks.append(Track(
+                self.tracks.append(
+                    Track(
                         artist_id=self.artist_id,
                         concert_id=self.id,
                         item_id=self.tag,
@@ -356,11 +360,11 @@ class Concert(core.Base):
                         number=track['track'],
                         name=track['title'],
                         length=time2sec(track['length'])
-                        ))
+                        )
+                    )
                 self.save()
             except (IntegrityError, InvalidRequestError):
                 pass
-
 
     def dict(self, metadata=False):
         concert = super(Concert, self).dict()
@@ -390,11 +394,10 @@ class Track(core.Base):
     name = Column(Unicode)
     length = Column(Integer)
     created = Column(DateTime(timezone=False), default=datetime.utcnow,
-                   nullable=False)
+                     nullable=False)
 
     concert = relationship('Concert', backref='tracks')
     artist = relationship('Artist', backref='tracks')
-
 
     @classmethod
     def register(cls, batch=100):
@@ -412,22 +415,22 @@ class Track(core.Base):
         while True:
             try:
                 offset = randint(0, int(Concert.query.count() / batch))
-                concerts = Concert.trackless_concerts(limit=batch, offset=offset)
+                concerts = Concert.trackless_concerts(
+                    limit=batch, offset=offset
+                    )
                 if not concerts:
                     break
                 for concert in concerts:
                     print("%s CONCERT: %s" % ("*" * 10, concert.tag))
                     concert.register_tracks()
-
-                    # remove concert if it still has no tracks after attempting to crawl.
-                    # (likely book / some other media accidentally include)
+                    # remove concert if it still has no tracks after
+                    # attempting to crawl.  (likely book / some other
+                    # media accidentally include)
                     if not concert.tracks:
                         print("Removing %s" % concert.tag)
                         concert.remove()
-
             except (ObjectDeletedError, InvalidRequestError):
                 db.remove()
-
 
     def dict(self):
         track = super(Track, self).dict()

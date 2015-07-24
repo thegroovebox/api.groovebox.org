@@ -1,9 +1,23 @@
+#!/usr/bin/env python
+# -*-coding: utf-8 -*-
 
-def subdict(d, keys):    
+"""
+    utils
+    ~~~~~
+
+    Various utilities (not groovebox specific)
+
+    :copyright: (c) 2015 by Mek
+    :license: see LICENSE for more details.
+"""
+
+
+def subdict(d, keys):
     """Create a dictionary containing only `keys`
     move to utils
     """
     return dict([(k, d[k]) for k in keys])
+
 
 def time2sec(t):
     t = str(t)

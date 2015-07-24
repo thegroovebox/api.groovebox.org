@@ -5,11 +5,15 @@ python:
 matrix:
   allow_failures:
     - python: "2.7"
-# command to install dependencies
 install:
-  - pip install . --use-mirrors
-# command to run tests, e.g. python setup.py test
+  - pip install flake8 --use-mirrors
+  - pip install pep8 --use-mirrors
+  - pip install -q -e . --use-mirrors
+addons:
+  postgresql: "9.3"
+before_script:
+  - psql -c 'create database groovebox;' -U postgres
 script:
   - nosetests
-  - if [[ $TRAVIS_PYTHON_VERSION == '2.7' ]]; then flake8 pypc; fi
+  - if [[ $TRAVIS_PYTHON_VERSION == '2.7' ]]; then flake8 groovebox; fi
 cache: apt
