@@ -3,17 +3,16 @@
 
 """
     app.py
-    ~~~~~~
-    
+    ~~~~~~    
 
-    :copyright: (c) 2015 by Anonymous
-    :license: BSD, see LICENSE for more details.
+    :copyright: (c) 2015 by Mek
+    :license: see LICENSE for more details.
 """
 
 from flask import Flask
 from flask.ext.routing import router
-from views import apis
 import views
+from views import apis
 from configs import options
 
 urls = ('/api', apis,
@@ -27,5 +26,3 @@ app = router(Flask(__name__), urls)
 
 if __name__ == "__main__":
     app.run(**options)
-
-
