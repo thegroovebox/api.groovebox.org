@@ -136,11 +136,7 @@ Groovebox exposes REST API endpoints for various entities, including:
 - /api/songs
 - /api/tracks
 
-The HTTP behavior of each of these endpoints is defined in
- `groovebox/views/apis/__init__.py`. The corresponding entities/models
- which provide data to these methods are defined in the file
- `groovebox/api/music.py`. They are built on top SQLAlchemy, a Python
- ORM.
+The HTTP behavior of each of these endpoints is defined in `groovebox/views/apis/__init__.py`. The corresponding entities/models which provide data to these methods are defined in the file `groovebox/api/music.py`. They are built on top SQLAlchemy, a Python ORM.
 
 An additional endpoint is provided for search which returns artists
 and songs which match the GET parameter `q`.
