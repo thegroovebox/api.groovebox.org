@@ -398,6 +398,17 @@ class Track(core.Base):
 
     @classmethod
     def register(cls, batch=100):
+        """Crawls concerts with no tracks in batches of 100 and
+        populate their tracks in your db. Crawling tracks can take a
+        long time (a few days) especially on low-performance
+        machines. You may wish to run `Track.register()` in multiple
+        python instances to crawl tracks concurrently. It is naively
+        architected to avoid duplicates.
+
+        usage:
+            >>> from api.music import Track
+            >>> Track.register()
+        """
         while True:
             try:
                 offset = randint(0, int(Concert.query.count() / batch))
