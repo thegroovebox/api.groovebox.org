@@ -1,13 +1,13 @@
-#!/usr/bin/env pythonNone
+#!/usr/bin/env python
 # -*-coding: utf-8 -*-
 
 """
     __init__.py
     ~~~~~~~~~~~
+    Groovebox API Endpoints
 
-
-    :copyright: (c) 2015 by Anonymous
-    :license: BSD, see LICENSE for more details.
+    :copyright: (c) 2015 by Mek Karpeles
+    :license: see LICENSE for more details.
 """
 
 from flask import request
@@ -132,7 +132,7 @@ class Genre(MethodView):
 class Tracks(MethodView):
 
     @rest_api
-    @paginate(limit=100, dumps=lambda t: [t.id, t.name])
+    @paginate(limit=100, dump=lambda t: [t.id, t.name])
     def get(self):
         return api.Track.query
 
@@ -147,7 +147,7 @@ class Track(MethodView):
 class Songs(MethodView):
 
     @rest_api
-    @paginate(limit=100, dumps=lambda s: [s.id, s.name])
+    @paginate(limit=25)
     def get(self):
         return api.Song.query
 
@@ -165,11 +165,15 @@ class Search(MethodView):
     def get(self):
         query = request.args.get('q')
         page = request.args.get('page', 0)
+        songs = int(request.args.get('songs', 0))
         if not query:
             return []
 
         artists = api.Artist.search(query, field="name", limit=5, page=page)
         tracks = api.Track.search(query, field="name", limit=15, page=page)
+        if songs:
+            return [s.dict() for s in
+                    api.Song.search(query, field="name", limit=15, page=page)]
         return {
             'artists': [a.dict() for a in artists],
             'tracks': [t.dict() for t in tracks]

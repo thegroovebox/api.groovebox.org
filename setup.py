@@ -36,7 +36,7 @@ def find_version(*file_paths):
     raise RuntimeError("Unable to find version string.")
 
 setup(
-    name='groovebox',
+    name='groovebox-server',
     version=find_version("groovebox", "configs/__init__.py"),
     description='A spotify-like Archive.org Music Player',
     long_description=read('README.rst'),
@@ -44,13 +44,14 @@ setup(
         ],
     author='mek',
     author_email='michael.karpeles@gmail.com',
-    url='groovebox.org',
+    url='api.groovebox.org',
     packages=[
         'groovebox'
         ],
     platforms='any',
     license='LICENSE',
     install_requires=[
+        'configparser >= 3.5.0b2',
         'Flask >= 0.10.1',
         'Flask-Routing',
         'psycopg2 >= 2.5.1',

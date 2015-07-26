@@ -10,36 +10,18 @@
 """
 
 import json
-import base64
 import traceback
 import os.path
-from bson import json_util
 from werkzeug import wrappers
-from flask import render_template, Response, request, redirect
+from flask import Response, request
 from flask.views import MethodView
+from utils import DatetimeEncoder
 from api import db
 
 
 class Favicon(MethodView):
     def get(self):
         return ""
-
-
-class Playlist(MethodView):
-    def get(self, code, name=""):
-        decode = base64.b64decode(code)
-        return redirect('/?queue=%s&name=%s' % (decode, name))
-
-
-class Base(MethodView):
-    def get(self, uri=None):
-        template = "partials/%s.html" % (uri or "index")
-        return render_template('base.html', template=template)
-
-
-class Partial(MethodView):
-    def get(self, partial):
-        return render_template('partials/%s.html' % partial)
 
 
 def rest_api(f):
@@ -50,7 +32,7 @@ def rest_api(f):
                 res = f(*args, **kwargs)
                 if isinstance(res, wrappers.Response):
                     return res
-                response = Response(json.dumps(res, default=json_util.default))
+                response = Response(json.dumps(res, cls=DatetimeEncoder))
             except Exception as e:
                 top = traceback.extract_stack()[-1]
                 r = {
