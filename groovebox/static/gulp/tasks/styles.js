@@ -7,8 +7,6 @@ var sass = require('gulp-sass');
 gulp.task('styles', function () {
   return gulp.src(config.styles.src)
     .pipe(sass({
-      sourceComments: global.isProd ? 'none' : 'map',
-      sourceMap: 'sass',
       outputStyle: global.isProd ? 'compressed' : 'nested'
     }))
     .pipe(gulp.dest(config.styles.dest));
