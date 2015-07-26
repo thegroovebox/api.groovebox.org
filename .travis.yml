@@ -15,5 +15,5 @@ before_script:
   - psql -c 'create database groovebox;' -U postgres
 script:
   - nosetests
-  - if [[ $TRAVIS_PYTHON_VERSION == '2.7' ]]; then flake8 groovebox; fi
+  - if [[ $TRAVIS_PYTHON_VERSION == '2.7' ]]; then flake8 groovebox --exclude static; fi
 cache: apt

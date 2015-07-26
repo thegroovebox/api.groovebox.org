@@ -7,3 +7,6 @@
 *.sock
 __pycache__
 groovebox.egg-info
+node_modules
+settings.json
+build
