@@ -1,8 +1,8 @@
 groovebox
 =========
 
-.. image:: https://travis-ci.org/mekarpeles/groovebox.org.svg
-    :target: https://travis-ci.org/mekarpeles/groovebox.org
+.. image:: https://travis-ci.org/thegroovebox/api.groovebox.org.svg
+    :target: https://travis-ci.org/thegroovebox/api.groovebox.org
 
 A spotify-like media player for the Internet Archive's collection of live music.
 
@@ -14,6 +14,12 @@ Archive.org has an entire free Live Music collection consisting of
 there's no easy way to search individual tracks or play tracks from
 different albums. Enter groovebox. Groovebox is a spotify clone for
 the Internet Archive's music collection.
+
+api.groovebox.org
+-----------------
+
+Api.groovebox.org is the API Server which provides groovebox clients
+with music data. It uses a postgres database under the SQLAlchemy ORM.
 
 Installation
 ------------
