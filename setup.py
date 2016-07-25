@@ -54,6 +54,7 @@ setup(
         'configparser >= 3.5.0b2',
         'Flask >= 0.10.1',
         'Flask-Routing',
+        'Flask-Cors',
         'psycopg2 >= 2.5.1',
         'requests >= 1.2.3',
         'sqlalchemy >= 1.0.6'
