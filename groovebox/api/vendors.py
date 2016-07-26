@@ -16,7 +16,8 @@ import requests
 from difflib import SequenceMatcher
 from utils import subdict
 
-REQUIRED_KEYS = ['title', 'length', 'name', 'track']
+OPTIONAL_KEYS = ['track', 'length', 'title']
+REQUIRED_KEYS = ['name']
 FILETYPE_PRIORITY = ['mp3', 'shn', 'ogg', 'flac']
 
 
@@ -26,16 +27,30 @@ class Vendor(object):
 
 class Archive(Vendor):
     BASE_URL = 'https://archive.org'
+    API_URL = "%s/advancedsearch.php" % BASE_URL
     METADATA_URL = '%s/metadata' % BASE_URL
 
     @classmethod
-    def filenames(cls, item):
+    def coverart(cls, tag, debug=False):
+        metadata = requests.get("%s/%s/files" % (cls.METADATA_URL, tag)).json()
+        if 'result' in metadata:
+            for f in metadata['result']:
+                if f['format'] == 'Collection Header':
+                    print(tag)
+                    return '%s/download/%s/%s' % (cls.BASE_URL, tag, f['name'])
+
+    @classmethod
+    def item_metadata(cls, item):
         url = "%s/%s" % (cls.METADATA_URL, item)
         try:
-            r = requests.get(url).json()
+            return requests.get(url).json()
         except:
-            r = {}
-        return r.pop('files', [])
+            return {}
+
+    @classmethod
+    def filenames(cls, item):
+        """Extracts filenames from an item's metadata"""
+        return cls.item_metadata(item).pop('files', [])
 
 
 class Musix(Vendor):
@@ -47,7 +62,7 @@ class Musix(Vendor):
         }
 
     @classmethod
-    def artist(cls, artist, albums=True, tracks=False, image=False, limit=5):
+    def artist(cls, artist, albums=True, songs=False, image=False, limit=5):
         """Use this to get an artist and their albums"""
         options = {
             "limit": limit
@@ -65,11 +80,11 @@ class Musix(Vendor):
         if albums:
             artist_id = match.get('artist', {}).get('artist_id')
             match['albums'] = [] if not artist_id else \
-                cls.albums(artist_id, tracks=tracks)
+                cls.albums(artist_id, songs=songs)
         return match
 
     @classmethod
-    def albums(cls, artist_id, tracks=False, page=1):
+    def albums(cls, artist_id, songs=False, page=1):
         """artist-id is the Artist's Musix id"""
         url = '%s/artist.albums.get' % cls.API_URL
         params = cls.API_PARAMS
@@ -79,32 +94,36 @@ class Musix(Vendor):
             'g_album_name': 1,
             'artist_id': artist_id
             })
-        if tracks:
+        if songs:
             pass
 
         return requests.get(url, params=params).json() \
             .get('message', {}).get('body', {}).get('album_list', [])
 
     @classmethod
-    def album_tracks(cls, album_id, page=1):
-        """Return tracks of an album by musix album id. This method
+    def album_songs(cls, album_id, page=1):
+        """Return songs of an album by musix album id. This method
         assumes no album will have more than 100 songs, or if it does,
         this is rare enough that it can be manually QA'd
         """
-        url = '%s/artist.albums.get' % cls.API_URL
+        url = '%s/album.tracks.get' % cls.API_URL
         params = cls.API_PARAMS
         params.update({
             "part": "track_artist",
+            "f_stop_words": 1,
+            "g_album_name_type": 1,
             "track_fields_set": "community_track_list",
-            "artist_fields_set": "community_track_list_artist",
             "page_size": 100,
-            "page": page
+            "page": page,
+            "album_id": album_id
             })
-        return requests.get(url, params=params).json() \
+        r = requests.get(url, params=params)
+        songs = r.json().get('message', {})\
             .get('body', {}).get('track_list', [])
+        return [s['track'] for s in songs]
 
     @classmethod
-    def tracks(cls, track, artist=False, limit=100):
+    def songs(cls, artist=False, limit=100):
         """
         url = "%s/album.tracks.get" % cls.API_URL
         params = cls.API_PARAMS
@@ -190,7 +209,7 @@ class Itunes(Vendor):
         results = r.get('results', [])
         for i, r in enumerate(results):
             results[i]['coverArt'] = results[i]["artworkUrl100"]\
-                .replace('.100x100-75', '')
+                .replace('.100x100-75', '').replace('100x100', '800x800')
         return results
 
 
@@ -220,7 +239,7 @@ class Crawler(object):
             "rows": limit,
             "output": "json"
             }
-        r = requests.get(Archive.API_URL, params=params).json()
+        r = requests.get(Archive.METADATA_URL, params=params).json()
         rs = r['response']['docs']
         return list(filter(lambda r: r['identifier'] != 'etree', rs))
 
@@ -282,7 +301,7 @@ class Crawler(object):
         return data
 
     @staticmethod
-    def _tracks(files):
+    def _tracks(files, debug=False):
         """Returns a sorted list of tracks given Archive.org item
         (concert) metadata files
         """
@@ -295,22 +314,29 @@ class Crawler(object):
                     tracks[i]['track'] = 1
             return sorted(tracks, key=lambda t: t['track'])
 
-        def get_filetype(files):
-            available = set(f.get('name', '').lower()
+        def get_filetype(files):            
+            filetypes = set(f.get('name', '').lower()
                             .rsplit('.', 1)[-1] for f in files)
-            return next(ft if ft in available else
-                        False for ft in FILETYPE_PRIORITY)
+            for ft in filetypes:
+                if ft in FILETYPE_PRIORITY:
+                    return ft
 
         ts = []
         filetype = get_filetype(files)
 
         if not filetype:
+            print("No valid filetype")
             return {}  # better error handling required
 
         for f in files:
             try:
+                if "title" not in f:
+                    f['title'] = f['name'].strip('.mp3')
                 track = subdict(f, REQUIRED_KEYS)
+                track.update(subdict(f, OPTIONAL_KEYS, required=False))
             except KeyError as e:
+                if debug:
+                    print(e)
                 continue  # Skip if track doesn't have required keys
 
             if track['name'].endswith(filetype):

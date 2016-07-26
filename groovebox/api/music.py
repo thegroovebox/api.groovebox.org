@@ -12,6 +12,7 @@
 """
 
 from random import randint
+import requests
 from datetime import datetime
 from sqlalchemy import Column, Unicode, BigInteger, Integer, \
     DateTime, ForeignKey, Table, exists, func
@@ -19,7 +20,7 @@ from sqlalchemy.exc import IntegrityError, InvalidRequestError
 from sqlalchemy.orm.exc import ObjectDeletedError
 from sqlalchemy.orm import relationship
 from api import db, engine, core
-from api.vendors import Crawler, Musix
+from api.vendors import Crawler, Musix, Archive, Itunes
 from utils import time2sec
 
 
@@ -37,7 +38,7 @@ def coldstart(concerts=True, tracks=False, crawl=False):
     having any tracks registered.
 
     usage:
-        >>> from api.crawler import Worker;Worker.coldstart()
+    >>> from api.crawler import Worker;Worker.coldstart()
     """
     build_tables()
     Artist.register(concerts=concerts, tracks=tracks)  # populate db
@@ -53,14 +54,26 @@ def report():
     """Generates a statistical report of database coverage compared to
     available data
     """
+    tracks_with_songs = Track.query\
+        .filter(Track.song_id is not None).count()
+    songs_with_tracks = db.query(Track.song_id)\
+        .distinct(Track.song_id).filter(Track.song_id is not None).count()
     concerts = Concert.query.count()
     trackless = Concert.trackless_concerts(query=True).count()
+
     return {
         "artists": Artist.query.count(),
         "concerts": concerts,
         "trackless_concerts": trackless,
         "complete_concerts": concerts - trackless,
-        "tracks": Track.query.count()
+        "songs": {
+            "total": Song.query.count(),
+            "with_tracks": songs_with_tracks
+            },
+        "tracks": {
+            "total": Track.query.count(),
+            "with_songs": tracks_with_songs
+            }
         }
 
 
@@ -126,6 +139,19 @@ class Artist(core.Base):
     album_query = relationship('Album', lazy='dynamic')
     concerts_query = relationship('Concert', lazy='dynamic')
 
+    # XXX If song has tracks
+    songs_query = relationship('Song', lazy='dynamic')
+    tracks_query = relationship('Track', lazy='dynamic')
+
+    def get_concerts(self):
+        try:
+            return requests.get("https://api.archivelab.org/search?q=collection:(" + self.tag + ")%20AND%20mediatype:(audio)&limit=1000").json()['response']['docs']
+        except KeyError:
+            return []
+
+    def get_metadata(self):
+        return Archive.get_metadata(self.tag)
+
     @classmethod
     def register(cls, artist=None, concerts=False, tracks=False, start=0):
         """Retrieves a json list of all artists from the Live Music
@@ -135,13 +161,13 @@ class Artist(core.Base):
         (items) and the concert's tracks (files).
 
         params:
-            artist - register a single artist (by [collection] name)
-            concerts - register artists' concerts?
-            tracks - register concerts tracks? Requires concerts=True
+        artist - register a single artist (by [collection] name)
+        concerts - register artists' concerts?
+        tracks - register concerts tracks? Requires concerts=True
 
         usage:
-            >>> from api.music import Artist
-            >>> Artist.register()
+        >>> from api.music import Artist
+        >>> Artist.register()
         """
         artists = [artist] if artist else Crawler.artists()
         for a in artists[start:]:
@@ -162,17 +188,18 @@ class Artist(core.Base):
         concerts if tracks=True.
 
         usage:
-            >>> from api.music import Artist
-            >>> a = Artist.get(tag="ExplosionsintheSky")
-            >>> a.register_concerts()
+        >>> from api.music import Artist
+        >>> a = Artist.get(tag="ExplosionsintheSky")
+        >>> a.register_concerts()
         """
         concerts = Crawler.concerts(self.tag)
         for concert in concerts:
-            name = concerts['title']
-            tag = concerts['identifier']
+            name = concert['title']
+            tag = concert['identifier']
             print(concert)
             try:
-                c = Concert(tag=tag, name=name)
+                c = Concert(tag=tag, name=name, artist_id=self.id)
+                c.create()
                 self.concerts.append(c)
                 self.save()
             except:
@@ -189,21 +216,79 @@ class Artist(core.Base):
         concerts = [concert] if concert else self.concerts
         [c.register_tracks() for c in concerts]
 
-    def register_albums(self, artist_id=None):
+    def registeralbums(self, artist_id=None):
         if artist_id and not self.musixmatch:
             self.musixmatch = artist_id
         if self.musixmatch:
             return Musix.albums(self.musixmatch)
 
-    def discography(self, tracks=False):
+    def register_songs(self, recrawl=False):
+        for album in self.albums:
+            if recrawl or not album.songs:
+                album.register_songs()
+
+    def resolve_songs(self):
+        """In some cases, metadata results in an artist which has
+        several songs which are semantically the same but have
+        different names:
+
+        e.g. "Touch of Grey", "Touch of Grey (Live)"
+
+        These should be considered the same songs. This function
+        naively entity resovles multiple songs of an Artist into 1
+        song (programmer is shown a list of songs and is promoted to
+        select which songs are merged into which master song) and then
+        updates the Artist's albums to point to correct master song.
+        """
+        def merge_songs(s1, s2):
+            """Merges song s2 into s1. s2 gives its tracks to s1. s2's
+            albums switch pointer to s1 in song_to_album
+            """
+            print("merging %s into %s" % (s1.name, s2.name))
+
+            # s1.tracks.extends(set(s1.tracks) - set(s2.tracks))
+            "update table song_albums set song_id = s1.id"
+            "where song_id = s2.id"
+            # in song_to_album
+            # change s.id to master_track.id
+            # raw sql, change s.id to master_track.id
+
+        offset = 0
+        while True:
+            # get first song by this artist
+            song = Song.query.filter(Song.artist_id == self.id)\
+                .offset(offset).first()
+
+            # If we've reached the end
+            if not song:
+                break
+
+            # get all songs by this artist whose names are like `song`
+            songs = Song.query.filter(Song.artist_id == self.id)\
+                .filter(Song.name.ilike("%" + song.name + "%")).all()
+
+            # get id of master and songs to merge from user
+            for i, s in enumerate(songs):
+                print(i, s.name)
+            merge = list(map(int, input("Merge (e.g. 1,2,3): ").split(",")))
+            master = int(input("Into (e.g. 4): "))
+
+            master_track = songs[master]
+            for i, s in enumerate(songs):
+                if i in merge:
+                    merge_songs(master_track, s)
+                    pass
+            break
+
+    def discography(self, songs=False):
         """Creates a discography for this artist by:"
 
         1. Updating the Artist with metadata + genres
         2. Creating a db entry for each of the Artist's `Albums`
         3. For each album, create (if !exists) or fetch Song and map
-           to Album
+        to Album
         4. For each Song, map Tracks whose titles match with >80%
-           confidence
+        confidence
         """
         def fillin_artist(m):
             self.musixmatch = m['artist']['artist_id']
@@ -218,7 +303,7 @@ class Artist(core.Base):
                 except:
                     self.genres.append(Genre(name=genre))
 
-        def create_albums(albums):
+        def create_albums(albums, songs=False):
             albums = m['albums']
             for data in albums:
                 album = data['album']
@@ -230,8 +315,8 @@ class Artist(core.Base):
                               musixmatch=album['album_id'],
                               coverart=album['album_coverart_800x800'])
                     self.albums.append(a)
-                if tracks:
-                    pass  # XXX
+                if songs:
+                    a.register_songs()
 
         m = Musix.artist(self.name, albums=True)
         fillin_artist(m)
@@ -246,7 +331,15 @@ class Artist(core.Base):
         for trackname in tracknames:
             pass
 
-    def dict(self, tracks=False, albums=False):
+    def dict(self, tracks=False, albums=False, art=False):
+        if not self.avatar and art:
+            try:
+                metadata = Itunes.search(artist=self.name)[0]
+                self.avatar = metadata.get('coverArt')
+                self.save()
+            except:
+                pass
+        
         artist = super(Artist, self).dict()
         artist['genres'] = [g.dict() for g in self.genres]
         if tracks:
@@ -274,11 +367,56 @@ class Album(core.Base):
     songs = relationship('Song', secondary=song_to_album,
                          backref="albums")
 
+
+    @classmethod
+    def resolve_songs(cls):
+        """Resolve tracks to their songs.
+        TODO make work like Track.register; multi-threadable
+
+        for each tracks, find all songs by artist_id
+        """
+        for album in Album.query.all():
+            for song in album.songs:
+                if not song.tracks:
+                    #  select tracks with artist_id
+                    tracks = Track.query.filter(Track.artist_id == album.artist_id)\
+                        .filter(Track.name.ilike("%" + song.name + "%")).all()
+                    for track in tracks:
+                        print("%s -is- %s" % (track.name, song.name))
+                        if not track.song_id:
+                            track.song_id = song.id
+                            track.save()
+
     def register_songs(self):
-        pass
+        """Discovers and creates db entries for the Songs of this
+        Album through the musixmatch api.
+
+        usage:
+        >>> from api.music import Artist
+        >>> a = Artist.get(tag="ExplosionsintheSky")
+        >>> a.albums[0].register_songs()
+        """
+        songs = Musix.album_songs(self.musixmatch)
+        for song in songs:
+            print(song)
+            try:
+                s = Song.get(musixmatch=str(song['track_id']))
+            except core.GrooveboxException:
+                s = Song(musixmatch=str(song['track_id']),
+                         name=song['track_name'],
+                         artist_id=self.artist_id)
+                s.create()
+            s.albums.append(self)
+
+            try:
+                s.save()
+            except Exception:
+                db.remove()
 
     def dict(self, songs=False):
         album = super(Album, self).dict()
+        album.pop('artist_id')
+        album['artist'] = self.artist.dict()
         if songs:
             album['songs'] = [s.dict() for s in self.songs]
         return album
@@ -305,6 +443,12 @@ class Song(core.Base):
 
     artist = relationship('Artist', backref='songs')
     tracks = relationship('Track', backref='song')
+
+    def dict(self):
+        song = super(Song, self).dict()
+        song['artist'] = self.artist.dict()
+        song['albums'] = [a.dict() for a in self.albums]
+        return song
 
 
 class Concert(core.Base):
@@ -351,26 +495,27 @@ class Concert(core.Base):
         for track in Crawler.tracks(self.tag):
             print(track['name'])
             try:
-                self.tracks.append(
-                    Track(
-                        artist_id=self.artist_id,
-                        concert_id=self.id,
-                        item_id=self.tag,
-                        file_id=track['name'],
-                        number=track['track'],
-                        name=track['title'],
-                        length=time2sec(track['length'])
-                        )
+                t = Track(
+                    artist_id=self.artist_id,
+                    concert_id=self.id,
+                    item_id=self.tag,
+                    file_id=track['name'],
+                    number=track['track'],
+                    name=track['title'],
+                    length=time2sec(track['length'])
                     )
+                t.create()
+                self.tracks.append(t)
                 self.save()
-            except (IntegrityError, InvalidRequestError):
-                pass
+            except (IntegrityError, InvalidRequestError) as e:
+                print(e)
 
-    def dict(self, metadata=False):
+    def dict(self, metadata=False, short=False):
         concert = super(Concert, self).dict()
-        concert['artist'] = self.artist.name
-        concert['tracks'] = sorted([track.dict() for track in self.tracks],
-                                   key=lambda x: x['number'])
+        if not short:
+            concert['artist'] = self.artist.name
+            concert['tracks'] = sorted([track.dict() for track in self.tracks],
+                                       key=lambda x: x['number'])
         if metadata:
             try:
                 concert['metadata'] = Crawler.metadata(artist=self.artist.name)
@@ -391,6 +536,7 @@ class Track(core.Base):
     file_id = Column(Unicode, nullable=False)
     song_id = Column(BigInteger, ForeignKey('songs.id'), nullable=True)
     number = Column(Integer, nullable=False)
+
     name = Column(Unicode)
     length = Column(Integer)
     created = Column(DateTime(timezone=False), default=datetime.utcnow,
@@ -409,8 +555,8 @@ class Track(core.Base):
         architected to avoid duplicates.
 
         usage:
-            >>> from api.music import Track
-            >>> Track.register()
+        >>> from api.music import Track
+        >>> Track.register()
         """
         while True:
             try:
@@ -434,9 +580,18 @@ class Track(core.Base):
 
     def dict(self):
         track = super(Track, self).dict()
+        track['download'] = '%s/stream/%s/%s' % (
+            Archive.BASE_URL, self.item_id, self.file_id)
+        track['play'] = '%s/download/%s/%s' % (
+            Archive.BASE_URL, self.item_id, self.file_id)
         track['artist'] = self.artist.dict()
         track['item_id'] = self.concert.tag
         return track
+
+    @classmethod
+    def search(cls, query, field, limit=10, page=0):
+        return cls.query.filter(getattr(cls, field).ilike("%" + query + "%"))\
+            .distinct(cls.artist_id).offset(page * limit).limit(limit).all()
 
 
 class Sessions(core.Base):

@@ -17,6 +17,7 @@ from flask import Response, request
 from flask.views import MethodView
 from utils import DatetimeEncoder
 from api import db
+from configs import DEBUG
 
 
 class Favicon(MethodView):
@@ -35,13 +36,12 @@ def rest_api(f):
                 response = Response(json.dumps(res, cls=DatetimeEncoder))
             except Exception as e:
                 top = traceback.extract_stack()[-1]
-                r = {
-                    "message": str(e),
-                    "error": ', '.join([type(e).__name__,
-                                        os.path.basename(top[0]),
-                                        str(top[1])
-                                        ])
-                    }
+                r = {"message": str(e)}
+                if DEBUG:
+                    r['error'] = ', '.join([type(e).__name__,
+                                            os.path.basename(top[0]),
+                                            str(top[1])
+                                            ])
                 response = Response(json.dumps(r))
             response.headers.add('Content-Type', 'application/json')
             response.headers['Access-Control-Allow-Credentials'] = 'true'
