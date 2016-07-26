@@ -5,7 +5,7 @@
     api/core.py
     ~~~~~~~~~~~
 
-    Groovebox API core
+    Be Yourself API core
 
     :copyright: (c) 2015 by mek.
     :license: see LICENSE for more details.
@@ -18,7 +18,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import ClauseElement
 
 
-class GrooveboxException(Exception):
+class BeYourselfException(Exception):
     def __init__(self, msg, cause='', http_error_code=None, *args, **kwargs):
         Exception.__init__(self, msg, *args)
 
@@ -65,9 +65,16 @@ class BaseMixin(object):
             return obj
 
         cause = dict(kwargs) if kwargs else list(args)
-        raise GrooveboxException(
+        raise BeYourselfException(
             "Failed to get %s: %s" % (cls.__name__, cause),
             cause=list(cause.keys()) if kwargs else cause)
+
+    @classmethod
+    def all(cls):
+        return cls.query.all()
+    
+    def __repr__(self):
+        return str(self.dict())
 
     def dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
@@ -105,7 +112,7 @@ class BaseMixin(object):
         """
         pid = getattr(self, self.PKEY, '')
         if not pid:
-            raise GrooveboxException(
+            raise BeYourselfException(
                 "Save operation requires primary key to be unset, "
                 "i.e. record must alreay exist")
         self.save_hook()
@@ -116,7 +123,7 @@ class BaseMixin(object):
         if update:
             pid = getattr(self, self.PKEY)  # TODO: make sure pid setattr
             if not self.exists(**{self.PKEY: pid}):
-                raise GrooveboxException(
+                raise BeYourselfException(
                     "Unable to save/update to %s entity with %s: %s. "
                     "Entry must first be created."
                     % (self.TBL, self.PKEY, pid))
