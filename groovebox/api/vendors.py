@@ -233,13 +233,14 @@ class Crawler(object):
             limit - default 15,000 as no music collection I know of
                     has more than 15,000 items.
         """
-        params = {
-            "q": "collection:(etree) AND mediatype:(collection)",
-            "fl[]": "identifier title",
-            "rows": limit,
-            "output": "json"
-            }
-        r = requests.get(Archive.METADATA_URL, params=params).json()
+        params = [
+            ("q", "collection:(etree) AND mediatype:(collection)"),
+            ("fl[]", "identifier"),
+            ("fl[]", "title"),
+            ("rows", limit),
+            ("output", "json")
+            ]
+        r = requests.get(Archive.API_URL, params=params).json()
         rs = r['response']['docs']
         return list(filter(lambda r: r['identifier'] != 'etree', rs))
 
